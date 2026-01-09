@@ -1,4 +1,3 @@
-import "@nomicfoundation/hardhat-ethers";
 // import "@nomicfoundation/hardhat-toolbox-mocha-ethers";
 import "@nomicfoundation/hardhat-toolbox";
 import "dotenv/config";
