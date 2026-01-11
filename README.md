@@ -1,54 +1,118 @@
-# Sample Hardhat 3 Beta Project (`mocha` and `ethers`)
+# Flash Loan Project 💸
 
-This project showcases a Hardhat 3 Beta project using `mocha` for tests and the `ethers` library for Ethereum interactions.
+Projeto de Flash Loan desenvolvido com Hardhat e integração com o protocolo Aave V3. Este projeto demonstra a implementação de empréstimos flash (flash loans) em Ethereum, permitindo empréstimos instantâneos sem garantia.
 
-To learn more about the Hardhat 3 Beta, please visit the [Getting Started guide](https://hardhat.org/docs/getting-started#getting-started-with-hardhat-3). To share your feedback, join our [Hardhat 3 Beta](https://hardhat.org/hardhat3-beta-telegram-group) Telegram group or [open an issue](https://github.com/NomicFoundation/hardhat/issues/new) in our GitHub issue tracker.
+## 📋 Sobre o Projeto
 
-## Project Overview
+Este projeto implementa um contrato inteligente de Flash Loan utilizando:
 
-This example project includes:
+- **Hardhat** - Framework de desenvolvimento Ethereum
+- **Aave V3** - Protocolo DeFi para flash loans
+- **Solidity** - Linguagem de programação para smart contracts
+- **TypeScript** - Para testes e scripts
+- **Ethers.js** - Biblioteca para interação com Ethereum
 
-- A simple Hardhat configuration file.
-- Foundry-compatible Solidity unit tests.
-- TypeScript integration tests using `mocha` and ethers.js
-- Examples demonstrating how to connect to different types of networks, including locally simulating OP mainnet.
+O contrato `FlashLoan.sol` estende `FlashLoanSimpleReceiverBase` do Aave e implementa a lógica necessária para executar operações de flash loan.
 
-## Usage
+## 🚀 Como Começar
 
-### Running Tests
+### Pré-requisitos
 
-To run all the tests in the project, execute the following command:
+Antes de começar, certifique-se de ter instalado:
 
-```shell
+- **Node.js** (versão 20 ou superior)
+- **npm** ou **yarn**
+- **Git**
+
+### Instalação
+
+1. **Clone o repositório**
+   ```bash
+   git clone <url-do-repositorio>
+   cd flash-loan-project
+   ```
+
+2. **Instale as dependências**
+   ```bash
+   npm install
+   ```
+
+3. **Configure as variáveis de ambiente**
+   
+   Crie um arquivo `.env` na raiz do projeto:
+   ```bash
+   # Exemplo de configuração
+   MAINNET_RPC_URL=sua_chave_mainnet
+   ```
+
+## 🧪 Executar Testes
+
+Para rodar todos os testes do projeto:
+
+```bash
 npx hardhat test
 ```
 
-You can also selectively run the Solidity or `mocha` tests:
+Para rodar testes específicos:
 
-```shell
+```bash
+# Apenas testes Solidity
 npx hardhat test solidity
+
+# Apenas testes Mocha
 npx hardhat test mocha
 ```
 
-### Make a deployment to Sepolia
+## 📁 Estrutura do Projeto
 
-This project includes an example Ignition module to deploy the contract. You can deploy this module to a locally simulated chain or to Sepolia.
+```
+flash-loan-project/
+├── contracts/          # Smart contracts Solidity
+│   ├── flashloan.sol  # Contrato principal de Flash Loan
+│   └── Counter.sol    # Contrato exemplo
+├── test/              # Testes do projeto
+│   ├── flash__loan.test.js
+│   └── sanity.test.js
+├── scripts/           # Scripts de deployment e testes
+├── ignition/          # Módulos Ignition para deployment
+└── hardhat.config.js  # Configuração do Hardhat
+```
 
-To run the deployment to a local chain:
+## 🔧 Comandos Úteis
 
-```shell
+```bash
+# Compilar contratos
+npx hardhat compile
+
+# Rodar testes
+npx hardhat test
+
+# Limpar cache e artefatos
+npx hardhat clean
+
+# Rodar node local
+npx hardhat node
+
+# Deploy (exemplo)
 npx hardhat ignition deploy ignition/modules/Counter.ts
 ```
 
-To run the deployment to Sepolia, you need an account with funds to send the transaction. The provided Hardhat configuration includes a Configuration Variable called `SEPOLIA_PRIVATE_KEY`, which you can use to set the private key of the account you want to use.
+## 📚 Recursos Adicionais
 
-You can set the `SEPOLIA_PRIVATE_KEY` variable using the `hardhat-keystore` plugin or by setting it as an environment variable.
+- [Documentação Hardhat](https://hardhat.org/docs)
+- [Aave V3 Docs](https://docs.aave.com/developers/)
+- [Solidity Documentation](https://docs.soliditylang.org/)
 
-To set the `SEPOLIA_PRIVATE_KEY` config variable using `hardhat-keystore`:
+## ⚠️ Notas Importantes
 
-```shell
-npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-```
+- Este projeto é para fins educacionais
+- Sempre teste em redes de teste antes de usar em mainnet
+- Nunca compartilhe suas chaves privadas
+- Os flash loans devem ser reembolsados na mesma transação
+
+## 📄 Licença
+
+MIT
 
 After setting the variable, you can run the deployment with the Sepolia network:
 
