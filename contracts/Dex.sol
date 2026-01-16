@@ -14,7 +14,7 @@ contract Dex {
     IERC20 private dai; // worth around 1 USD
     IERC20 private weth; // worth 1 ETH
 
-
+    // TODO IMPLEMENT simulate slippage or liquidity:
     // how many WETH you get for 1 DAI (scaled by 1e18)
     uint256 public price;
 
@@ -25,7 +25,6 @@ contract Dex {
 
     constructor(uint256 starting_price) {
         require(starting_price > 0, "Price must be > 0");
-
         owner = payable(msg.sender);
         dai = IERC20(daiAddress);
         weth = IERC20(wethAddress);
@@ -73,6 +72,8 @@ contract Dex {
 
     // Change the exchange rate (Simulate the market)
     function setPrice(uint256 newPrice) external {
+        require(msg.sender == owner, "Only owner");
+
         require(newPrice > 0, "Invalid price");
         price = newPrice;
     }

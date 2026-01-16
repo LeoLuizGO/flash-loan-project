@@ -40,6 +40,7 @@ describe("Dex", function () {
     const Dex = await ethers.getContractFactory("Dex");
     dex = await Dex.deploy(DAI_WETH_PRICE);
     await dex.waitForDeployment();
+
   });
 
   it("Test Dex getter and setter functions", async function(){
