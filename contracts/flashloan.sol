@@ -47,7 +47,7 @@ contract FlashLoan is FlashLoanSimpleReceiverBase {
     /**
         This function is called after your contract has received the flash loaned amount
      */
-    //TODO implement dynamic ExecuteOperation | MAKE AN ACTUAL FLASHLOAN, CURRENTLY SENDING MONEY TO CONTRACT TO SIMULATE LOAN
+    //TODO implement dynamic ExecuteOperation
     function executeOperation(
         address asset,
         uint256 amount,
@@ -55,53 +55,94 @@ contract FlashLoan is FlashLoanSimpleReceiverBase {
         address initiator,
         bytes calldata params
     ) external override returns (bool) {
-        //
-        // This contract now has the funds requested.
-        // Your logic goes here.
-        //
 
-        require(asset == address(dai), "Only DAI flashloan supported");
-        uint256 daiAmount = amount;
-        dai.approve(address(dexA), daiAmount);
-        dai.approve(address(dexB), daiAmount);
+        // DAI --> WETH --> DAI
+        if (asset == address(dai)){
+            uint256 daiAmount = amount;
+            dai.approve(address(dexA), daiAmount);
+            dai.approve(address(dexB), daiAmount);
 
 
-//        uint256 userDAIAmount = getBalance(daiAddress);
-//        uint256 userWETHAmount = getBalance(wethAddress);
+            // Amount of WETH per DAI
+            uint256 dexAPrice = dexA.getPrice();
+            uint256 dexBPrice = dexB.getPrice();
 
-        // Amount of WETH per DAI
-        uint256 dexAPrice = dexA.getPrice();
-        uint256 dexBPrice = dexB.getPrice();
-
-        uint256 wethReceived;
+            uint256 wethReceived;
 
 
-        if (dexAPrice > dexBPrice) {
-            // WETH is cheaper on DEXA, buy it from DEXA and sell it to DEXB
+            if (dexAPrice > dexBPrice) {
+                // WETH is cheaper on DEXA, buy it from DEXA and sell it to DEXB
 
-            dexA.buyWETH(daiAmount);
-            wethReceived = (daiAmount * dexAPrice) / 1e18;
+                dexA.buyWETH(daiAmount);
+                wethReceived = (daiAmount * dexAPrice) / 1e18;
 
-            weth.approve(address(dexB), wethReceived);
+                weth.approve(address(dexB), wethReceived);
 
-            // Sell WETH for DAI on Dex B
-            dexB.sellWETH(wethReceived);
-        }else {
-            // WETH is cheaper on DEXB, buy it from DEXB and sell it to DEXA
-            dexB.buyWETH(daiAmount);
-            wethReceived = (daiAmount * dexBPrice) / 1e18;
+                // Sell WETH for DAI on Dex B
+                dexB.sellWETH(wethReceived);
+            }else {
+                // WETH is cheaper on DEXB, buy it from DEXB and sell it to DEXA
+                dexB.buyWETH(daiAmount);
+                wethReceived = (daiAmount * dexBPrice) / 1e18;
 
-            weth.approve(address(dexA), wethReceived);
+                weth.approve(address(dexA), wethReceived);
 
-            dexA.sellWETH(wethReceived);
-    }
-        uint256 newDAIBalance = dai.balanceOf(address(this));
+                dexA.sellWETH(wethReceived);
+            }
+            uint256 newDAIBalance = dai.balanceOf(address(this));
 
-        // Ensure it was profitable
-        uint256 totalDebt = daiAmount + premium;
-        require(newDAIBalance >= totalDebt, "Arbitrage not profitable");
+            // Ensure it was profitable
+            uint256 totalDebt = daiAmount + premium;
+            require(newDAIBalance >= totalDebt, "Arbitrage not profitable");
 
-        IERC20(asset).approve(address(POOL), totalDebt);
+            IERC20(asset).approve(address(POOL), totalDebt);
+
+        // WETH --> DAI --> WETH
+        }else if (asset == address(weth)){
+            uint256 wethAmount = amount;
+            weth.approve(address(dexA), wethAmount);
+            weth.approve(address(dexB), wethAmount);
+
+
+    //        uint256 userDAIAmount = getBalance(daiAddress);
+    //        uint256 userWETHAmount = getBalance(wethAddress);
+
+            // Amount of WETH per DAI
+            uint256 dexAPrice = dexA.getPrice();
+            uint256 dexBPrice = dexB.getPrice();
+
+            uint256 daiReceived;
+
+
+            if (dexAPrice < dexBPrice) {
+                // DAI is cheaper on DEXA, buy it from DEXA and sell it to DEXB
+
+                dexA.buyDAI(wethAmount);
+                daiReceived = (wethAmount * 1e18) / dexAPrice;
+
+                dai.approve(address(dexB), daiReceived);
+
+                // Sell DAI for WETH on Dex B
+                dexB.sellDAI(daiReceived);
+            }else {
+                // DAI is cheaper on DEXB, buy it from DEXB and sell it to DEXA
+                dexB.buyDAI(wethAmount);
+                daiReceived = (wethAmount * 1e18) / dexBPrice;
+
+                dai.approve(address(dexA), daiReceived);
+
+                dexA.sellDAI(daiReceived);
+            }
+
+            uint256 newWETHBalance = weth.balanceOf(address(this));
+
+            // Ensure it was profitable
+            uint256 totalDebt = wethAmount + premium;
+            require(newWETHBalance >= totalDebt, "Arbitrage not profitable");
+
+            IERC20(asset).approve(address(POOL), totalDebt);
+        }
+
 
         return true;
     }

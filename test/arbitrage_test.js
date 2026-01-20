@@ -83,4 +83,63 @@ describe("Flashloan Arbitrage (DAI only)", function () {
     expect(daiAfter).to.be.gt(daiBefore);
 
 });
+
+ it("Should revert when arbitrage is not profitable", async function () {
+    // Same price on both DEXes → no arbitrage
+
+    const Dex = await ethers.getContractFactory("Dex");
+
+    const badDexA = await Dex.deploy(DEX_A_PRICE);
+    await badDexA.waitForDeployment();
+
+    const badDexB = await Dex.deploy(DEX_A_PRICE);
+    await badDexB.waitForDeployment();
+
+    // Fund both DEXes
+    const fundDAI = ethers.parseUnits("100000", 18);
+    const fundWETH = ethers.parseUnits("50", 18);
+
+    await dai.connect(whaleDai).transfer(await badDexA.getAddress(), fundDAI);
+    await weth.connect(whaleWeth).transfer(await badDexA.getAddress(), fundWETH);
+
+    await dai.connect(whaleDai).transfer(await badDexB.getAddress(), fundDAI);
+    await weth.connect(whaleWeth).transfer(await badDexB.getAddress(), fundWETH);
+
+    // Deploy a new FlashLoan contract pointing to the bad DEXes
+    const Arb = await ethers.getContractFactory("FlashLoan");
+    const badArb = await Arb.deploy(
+      POOL_ADDRESS_PROVIDER,
+      await badDexA.getAddress(),
+      await badDexB.getAddress()
+    );
+    await badArb.waitForDeployment();
+
+    const flashloanAmount = ethers.parseUnits("10000", 18);
+
+    // Expect revert due to lack of profit
+    await expect(
+      badArb.requestFlashLoan(DAI_ADDRESS, flashloanAmount)
+    ).to.be.revertedWith("Arbitrage not profitable");
+
+    console.log("✅ Arbitrage correctly reverted when not profitable");
+});
+
+ it("Should perform WETH → DAI → WETH arbitrage and make profit", async function () {
+
+      await dexA.setPrice(ethers.parseUnits("0.00033333333", 18));
+      await dexB.setPrice(ethers.parseUnits("0.00044444444", 18));
+
+      const flashloanAmount = ethers.parseUnits("10", 18); // 10 WETH
+
+      const wethBefore = await weth.balanceOf(arb.target);
+      console.log("Arb WETH balance before:", ethers.formatEther(wethBefore));
+
+      const tx = await arb.requestFlashLoan(WETH_ADDRESS, flashloanAmount);
+      await tx.wait();
+
+      const wethAfter = await weth.balanceOf(arb.target);
+      console.log("Arb WETH balance after:", ethers.formatEther(wethAfter));
+
+      expect(wethAfter).to.be.gt(wethBefore);
+});
 });
