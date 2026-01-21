@@ -3,7 +3,7 @@ import hre from "hardhat";
 
 const { ethers } = hre;
 
-describe("Flashloan Arbitrage (DAI only)", function () {
+describe("Flashloan Arbitrage", function () {
   const POOL_ADDRESS_PROVIDER = "0x2f39d218133AFaB8F2B819B1066c7E434Ad94E9e";
 
 

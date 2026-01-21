@@ -22,7 +22,7 @@
     "@types/node": "^25.0.3",
     "chai": "^4.5.0",
     "ethers": "^6.16.0",
-    "hardhat": "^2.22.0",
+    "hardhat": "^2.28.3",
     "hardhat-gas-reporter": "^1.0.10",
     "solidity-coverage": "^0.8.17",
     "ts-node": "^10.9.2",
@@ -31,7 +31,24 @@
   },
   "dependencies": {
     "@aave/core-v3": "^1.19.3",
-    "@openzeppelin/contracts": "^5.0.2",
+    "@openzeppelin/contracts": "^5.4.0",
+    "@uniswap/v2-core": "^1.0.1",
+    "@uniswap/v2-periphery": "^1.1.0-beta.0",
     "dotenv": "^16.4.5"
-  }
+  },
+  "main": "hardhat.config.js",
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LeoLuizGO/flash-loan-project.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/LeoLuizGO/flash-loan-project/issues"
+  },
+  "homepage": "https://github.com/LeoLuizGO/flash-loan-project#readme"
 }
