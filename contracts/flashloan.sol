@@ -40,7 +40,6 @@ TODO — Projeto Flash Loan (Disciplina Blockchain)
       - [ ] Usuários executam o empréstimo com assinatura válida
 - [ ] Prevenir replay attacks:
       - [ ] Implementar nonce por usuário OU deadline
-- [ ] (Opcional / bônus) Migrar para EIP-712 (typed data)
 
 --------------------------------------------------------
 
@@ -107,6 +106,7 @@ contract FlashLoan is FlashLoanSimpleReceiverBase {
     IERC20 private dai;
     IERC20 private weth;
 
+    mapping(address => bool) public authorizedSigners;
 
     // Outro constructor pra nao da erro nos testes
     constructor(address _addressProvider, address dex1Address, address dex2Address)
@@ -117,6 +117,8 @@ contract FlashLoan is FlashLoanSimpleReceiverBase {
         dexB = IDex(dex2Address);
         dai = IERC20(daiAddress);
         weth = IERC20(wethAddress);
+
+        authorizedSigners[owner] = true;
     }
 
     /**
@@ -222,7 +224,24 @@ contract FlashLoan is FlashLoanSimpleReceiverBase {
         return true;
     }
 
-    function requestFlashLoan(address _token, uint256 _amount) public {
+    function addSigner(address _signer) external onlyOwner {
+        authorizedSigners[_signer] = true;
+    }
+
+    function requestFlashLoan(address _token, uint256 _amount, uint256 _nonce, bytes memory _signature) public {
+        // Verificar a assinatura ANTES de executar o flash loan
+        bytes32 messageHash = keccak256(abi.encodePacked(
+            _token,
+            _amount, 
+            _nonce,
+            address(this)
+        ));
+        bytes32 ethSignedHash = getEthSignedMessageHash(messageHash);
+        address signer = recoverSigner(ethSignedHash, _signature);
+
+        require(authorizedSigners[signer], "Unauthorized signer");
+
+        // Executar o flash loan após verificação
         address receiverAddress = address(this);
         address asset = _token;
         uint256 amount = _amount;
@@ -236,6 +255,36 @@ contract FlashLoan is FlashLoanSimpleReceiverBase {
             params,
             referralCode
         );
+    }
+
+    function getEthSignedMessageHash(bytes32 _messageHash) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", _messageHash));
+    }
+
+    function recoverSigner(
+        bytes32 _ethSignedMessageHash,
+        bytes memory _signature
+    ) public pure returns (address) {
+        (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
+        return ecrecover(_ethSignedMessageHash, v, r, s);
+    }
+
+    function splitSignature(bytes memory sig)
+        public
+        pure
+        returns (
+            bytes32 r,
+            bytes32 s,
+            uint8 v
+        )
+    {
+        require(sig.length == 65, "invalid signature length");
+
+        assembly {
+            r := mload(add(sig, 32))
+            s := mload(add(sig, 64))
+            v := byte(0, mload(add(sig, 96)))
+        }
     }
 
     function getBalance(address _tokenAddress) public view returns (uint256) {

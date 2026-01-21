@@ -18,9 +18,20 @@ describe("Flashloan Arbitrage", function () {
   let signer, whaleDai, whaleWeth;
   let dexA, dexB;
   let arb;
+  let nonce = 0; // Nonce counter for signatures
 
   const DEX_A_PRICE = ethers.parseUnits("0.000333333333333333", 18);
   const DEX_B_PRICE = ethers.parseUnits("0.0004", 18);
+
+  // Helper function to create signature
+  async function createSignature(token, amount, nonce, contractAddress, signer) {
+    const messageHash = ethers.solidityPackedKeccak256(
+      ["address", "uint256", "uint256", "address"],
+      [token, amount, nonce, contractAddress]
+    );
+    const signature = await signer.signMessage(ethers.getBytes(messageHash));
+    return signature;
+  }
 
   beforeEach(async function () {
     [signer] = await ethers.getSigners();
@@ -49,6 +60,16 @@ describe("Flashloan Arbitrage", function () {
     });
     whaleWeth = await ethers.getSigner(WETH_ACCOUNT);
 
+    // Fund whale accounts with ETH for gas
+    await signer.sendTransaction({
+      to: DAI_ACCOUNT,
+      value: ethers.parseEther("10")
+    });
+    await signer.sendTransaction({
+      to: WETH_ACCOUNT,
+      value: ethers.parseEther("10")
+    });
+
     // Deploy DexA and DexB
     const Dex = await ethers.getContractFactory("Dex");
 
@@ -63,10 +84,14 @@ describe("Flashloan Arbitrage", function () {
     const fundWETH = ethers.parseUnits("50", 18);
 
     await dai.connect(whaleDai).transfer(await dexA.getAddress(), fundDAI);
-    await weth.connect(whaleWeth).transfer(await dexA.getAddress(), fundWETH);
+    // Wrap ETH to WETH for dexA
+    await signer.sendTransaction({ to: WETH_ADDRESS, value: fundWETH });
+    await weth.connect(signer).transfer(await dexA.getAddress(), fundWETH);
 
     await dai.connect(whaleDai).transfer(await dexB.getAddress(), fundDAI);
-    await weth.connect(whaleWeth).transfer(await dexB.getAddress(), fundWETH);
+    // Wrap ETH to WETH for dexB
+    await signer.sendTransaction({ to: WETH_ADDRESS, value: fundWETH });
+    await weth.connect(signer).transfer(await dexB.getAddress(), fundWETH);
 
     // Deploy Arbitrage contract
     const Arb = await ethers.getContractFactory("FlashLoan");
@@ -80,8 +105,17 @@ describe("Flashloan Arbitrage", function () {
     const daiBefore = await dai.balanceOf(arb.target);
     console.log("User DAI balance before arb:", ethers.formatUnits(daiBefore, 18));
 
-    // Request a flashloan from the pool
-    const tx = await arb.requestFlashLoan(DAI_ADDRESS, flashloanAmount);
+    // Create signature
+    const signature = await createSignature(
+      DAI_ADDRESS,
+      flashloanAmount,
+      nonce++,
+      await arb.getAddress(),
+      signer
+    );
+
+    // Request a flashloan from the pool with signature
+    const tx = await arb.requestFlashLoan(DAI_ADDRESS, flashloanAmount, nonce - 1, signature);
     await tx.wait();
 
     const daiAfter = await dai.balanceOf(arb.target);
@@ -107,10 +141,14 @@ describe("Flashloan Arbitrage", function () {
     const fundWETH = ethers.parseUnits("50", 18);
 
     await dai.connect(whaleDai).transfer(await badDexA.getAddress(), fundDAI);
-    await weth.connect(whaleWeth).transfer(await badDexA.getAddress(), fundWETH);
+    // Wrap ETH to WETH
+    await signer.sendTransaction({ to: WETH_ADDRESS, value: fundWETH });
+    await weth.connect(signer).transfer(await badDexA.getAddress(), fundWETH);
 
     await dai.connect(whaleDai).transfer(await badDexB.getAddress(), fundDAI);
-    await weth.connect(whaleWeth).transfer(await badDexB.getAddress(), fundWETH);
+    // Wrap ETH to WETH
+    await signer.sendTransaction({ to: WETH_ADDRESS, value: fundWETH });
+    await weth.connect(signer).transfer(await badDexB.getAddress(), fundWETH);
 
     // Deploy a new FlashLoan contract pointing to the bad DEXes
     const Arb = await ethers.getContractFactory("FlashLoan");
@@ -123,9 +161,18 @@ describe("Flashloan Arbitrage", function () {
 
     const flashloanAmount = ethers.parseUnits("10000", 18);
 
+    // Create signature
+    const signature = await createSignature(
+      DAI_ADDRESS,
+      flashloanAmount,
+      nonce++,
+      await badArb.getAddress(),
+      signer
+    );
+
     // Expect revert due to lack of profit
     await expect(
-      badArb.requestFlashLoan(DAI_ADDRESS, flashloanAmount)
+      badArb.requestFlashLoan(DAI_ADDRESS, flashloanAmount, nonce - 1, signature)
     ).to.be.revertedWith("Arbitrage not profitable");
 
     console.log("✅ Arbitrage correctly reverted when not profitable");
@@ -141,7 +188,16 @@ describe("Flashloan Arbitrage", function () {
       const wethBefore = await weth.balanceOf(arb.target);
       console.log("Arb WETH balance before:", ethers.formatEther(wethBefore));
 
-      const tx = await arb.requestFlashLoan(WETH_ADDRESS, flashloanAmount);
+      // Create signature
+      const signature = await createSignature(
+        WETH_ADDRESS,
+        flashloanAmount,
+        nonce++,
+        await arb.getAddress(),
+        signer
+      );
+
+      const tx = await arb.requestFlashLoan(WETH_ADDRESS, flashloanAmount, nonce - 1, signature);
       await tx.wait();
 
       const wethAfter = await weth.balanceOf(arb.target);
