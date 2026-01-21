@@ -26,8 +26,15 @@ describe("Flashloan Arbitrage (DAI only)", function () {
     [signer] = await ethers.getSigners();
 
     // Get ERC20 contracts
-    dai = await ethers.getContractAt("IERC20", DAI_ADDRESS);
-    weth = await ethers.getContractAt("IERC20", WETH_ADDRESS);
+      dai = await ethers.getContractAt(
+      "@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20",
+      DAI_ADDRESS
+    );
+
+    weth = await ethers.getContractAt(
+      "@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20",
+      WETH_ADDRESS
+    );
 
     // Impersonate whales
     await hre.network.provider.request({

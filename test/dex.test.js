@@ -20,8 +20,15 @@ describe("Dex", function () {
   beforeEach(async function () {
     [signer] = await ethers.getSigners();
 
-    dai = await ethers.getContractAt("IERC20", DAI_ADDRESS);
-    weth = await ethers.getContractAt("IERC20", WETH_ADDRESS);
+    dai = await ethers.getContractAt(
+    "@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20",
+    DAI_ADDRESS
+  );
+
+    weth = await ethers.getContractAt(
+    "@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20",
+    WETH_ADDRESS
+  );
 
     // Impersonate DAI whale
     await hre.network.provider.request({
