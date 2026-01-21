@@ -7,12 +7,11 @@ describe("Dex", function () {
   const DAI_ADDRESS = "0x6B175474E89094C44Da98b954EedeAC495271d0F";
   const WETH_ADDRESS = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2";
   const DAI_ACCOUNT = "0x28C6c06298d514Db089934071355E5743bf21d60";
-  const WETH_ACCOUNT = "0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2"
 
 
 
   let dex, dai, weth;
-  let signer, whaleDai, whaleWeth;
+  let signer, whaleDai;
 
   // 1 ETH = 3000 DAI example
   const DAI_WETH_PRICE = ethers.parseUnits("0.000333333333333333", 18);
@@ -21,12 +20,12 @@ describe("Dex", function () {
     [signer] = await ethers.getSigners();
 
     dai = await ethers.getContractAt(
-    "@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20",
+    "@aave/core-v3/contracts/dependencies/openzeppelin/contracts/IERC20.sol:IERC20",
     DAI_ADDRESS
   );
 
     weth = await ethers.getContractAt(
-    "@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20",
+    "@aave/core-v3/contracts/dependencies/openzeppelin/contracts/IERC20.sol:IERC20",
     WETH_ADDRESS
   );
 
@@ -36,12 +35,12 @@ describe("Dex", function () {
       params: [DAI_ACCOUNT],
     });
     whaleDai = await ethers.getSigner(DAI_ACCOUNT);
-
-    await hre.network.provider.request({
-      method: "hardhat_impersonateAccount",
-      params: [WETH_ACCOUNT],
+    
+    // Fund DAI whale with ETH for gas
+    await signer.sendTransaction({
+      to: DAI_ACCOUNT,
+      value: ethers.parseEther("10")
     });
-    whaleWeth = await ethers.getSigner(WETH_ACCOUNT);
 
     // Deploy DEX contract
     const Dex = await ethers.getContractFactory("Dex");
@@ -89,9 +88,15 @@ describe("Dex", function () {
     console.log("WETH Balance in WEI:", wethBalance);
     console.log("WETH balance in ETH:", ethers.formatEther(wethBalance), "ETH");
 
-
+    // Wrap ETH to WETH using signer
     const fundWeth = ethers.parseUnits("50", 18);
-    await weth.connect(whaleWeth).transfer(await dex.getAddress(), fundWeth);
+    // Send ETH to WETH contract to wrap it
+    await signer.sendTransaction({
+      to: WETH_ADDRESS,
+      value: fundWeth
+    });
+    // Transfer WETH to DEX
+    await weth.connect(signer).transfer(await dex.getAddress(), fundWeth);
     const newWETHBalance = await dex.getWETHBalance();
     console.log("New WETH Balance in WEI:", newWETHBalance);
     console.log("New WETH balance in ETH:", ethers.formatEther(newWETHBalance), "ETH");
@@ -100,11 +105,13 @@ describe("Dex", function () {
 
 
   it("DEX buys WETH, pays with day", async function () {
-    // const whaleBalance = await weth.balanceOf(whaleWeth.address);
-    // console.log("Whale WETH balance:", ethers.formatEther(whaleBalance), "ETH");
-
+    // Wrap ETH to WETH for the DEX
     const fundWeth = ethers.parseUnits("600", 18);
-    await weth.connect(whaleWeth).transfer(await dex.getAddress(), fundWeth);
+    await signer.sendTransaction({
+      to: WETH_ADDRESS,
+      value: fundWeth
+    });
+    await weth.connect(signer).transfer(await dex.getAddress(), fundWeth);
     const WETHBalance = await dex.getWETHBalance();
     console.log("DEX New WETH Balance:", WETHBalance);
 
@@ -141,8 +148,13 @@ describe("Dex", function () {
     console.log("DEX WETH balance after trade:", ethers.formatEther(dexWethAfter), "ETH");
   });
 it("DEX buys DAI, pays WETH to user", async function () {
+  // Wrap ETH to WETH for the DEX
   const fundWeth = ethers.parseUnits("50", 18);
-  await weth.connect(whaleWeth).transfer(await dex.getAddress(), fundWeth);
+  await signer.sendTransaction({
+    to: WETH_ADDRESS,
+    value: fundWeth
+  });
+  await weth.connect(signer).transfer(await dex.getAddress(), fundWeth);
 
   const dexDaiBefore = await dex.getDAIBalance();
   const dexWethBefore = await dex.getWETHBalance();

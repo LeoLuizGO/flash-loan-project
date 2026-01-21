@@ -27,12 +27,12 @@ describe("Flashloan Arbitrage", function () {
 
     // Get ERC20 contracts
       dai = await ethers.getContractAt(
-      "@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20",
+      "@aave/core-v3/contracts/dependencies/openzeppelin/contracts/IERC20.sol:IERC20",
       DAI_ADDRESS
     );
 
     weth = await ethers.getContractAt(
-      "@openzeppelin/contracts/token/ERC20/IERC20.sol:IERC20",
+      "@aave/core-v3/contracts/dependencies/openzeppelin/contracts/IERC20.sol:IERC20",
       WETH_ADDRESS
     );
 
