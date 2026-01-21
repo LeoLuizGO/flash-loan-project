@@ -5,6 +5,81 @@ import {FlashLoanSimpleReceiverBase} from "@aave/core-v3/contracts/flashloan/bas
 import {IPoolAddressesProvider} from "@aave/core-v3/contracts/interfaces/IPoolAddressesProvider.sol";
 import {IERC20} from "@aave/core-v3/contracts/dependencies/openzeppelin/contracts/IERC20.sol";
 
+/*
+========================================================
+TODO — Projeto Flash Loan (Disciplina Blockchain)
+========================================================
+
+1. LÓGICA DE MOVIMENTAÇÕES (PENDENTE)
+--------------------------------------------------------
+- [ ] Finalizar a lógica de movimentação dos tokens durante o flash loan
+- [ ] Aguardar resposta do professor para definir a abordagem:
+      - [ ] Utilizar uma DEX real (Uniswap ou SushiSwap)
+      - [ ] OU utilizar uma DEX mockada (contrato simulando swaps)
+- [ ] Caso DEX real:
+      - [ ] Integrar Uniswap ou SushiSwap
+      - [ ] Implementar troca ERC-20 → ERC-20
+      - [ ] Tratar taxas e slippage
+- [ ] Caso DEX mock:
+      - [ ] Criar contrato MockDex
+      - [ ] Simular trocas entre tokens
+      - [ ] Controlar taxas manualmente
+- [ ] Garantir que o valor do flash loan + fee seja devolvido
+- [ ] Validar saldo antes e depois da execução
+
+--------------------------------------------------------
+
+2. CRIPTOGRAFIA (OBRIGATÓRIO)
+--------------------------------------------------------
+- [ ] Implementar autenticação criptográfica para executar o flash loan
+- [ ] Utilizar assinaturas digitais (ECDSA)
+      - [ ] keccak256
+      - [ ] ECDSA.recover
+- [ ] Definir política de autorização:
+      - [ ] Apenas o owner assina a autorização
+      - [ ] Usuários executam o empréstimo com assinatura válida
+- [ ] Prevenir replay attacks:
+      - [ ] Implementar nonce por usuário OU deadline
+- [ ] (Opcional / bônus) Migrar para EIP-712 (typed data)
+
+--------------------------------------------------------
+
+3. TESTES DO SMART CONTRACT
+--------------------------------------------------------
+- [ ] Testar execução autorizada
+- [ ] Testar execução sem assinatura (revert)
+- [ ] Testar replay attack
+- [ ] Testar falha na devolução do flash loan
+- [ ] Testar valores inválidos
+
+--------------------------------------------------------
+
+4. FRONTEND (PENDENTE)
+--------------------------------------------------------
+- [ ] Criar frontend simples (React / Next.js / Vite)
+- [ ] Conectar carteira (MetaMask)
+- [ ] Interface para:
+      - [ ] Escolher token
+      - [ ] Definir valor do flash loan
+- [ ] Gerar assinatura criptográfica no frontend
+      - [ ] signMessage OU EIP-712
+- [ ] Chamar a função requestFlashLoan
+- [ ] Exibir status da transação (sucesso / erro)
+
+--------------------------------------------------------
+
+5. DOCUMENTAÇÃO / ENTREGA
+--------------------------------------------------------
+- [ ] Explicar o conceito de flash loan
+- [ ] Explicar uso do padrão ERC-20
+- [ ] Explicar a aplicação de criptografia no projeto
+- [ ] Justificar a escolha entre DEX real ou mock
+- [ ] Descrever arquitetura geral
+- [ ] Descrever os testes realizados
+
+========================================================
+*/
+
 interface IDex {
     function buyWETH(uint256 daiAmount) external;
 
