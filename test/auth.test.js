@@ -42,20 +42,43 @@ describe("FlashLoan - Authentication Tests", function () {
     const contractAddress = await flashLoanContract.getAddress();
     console.log("FlashLoan deployed at:", contractAddress);
 
-    // Setup DAI contract
+    // Setup token contracts
     daiContract = await ethers.getContractAt("IERC20", DAI_ADDRESS);
+    const wethContract = await ethers.getContractAt("IERC20", WETH_ADDRESS);
 
-    // Impersonate Binance and fund contract
+    // Impersonate Binance and fund contracts
     await network.provider.request({
       method: "hardhat_impersonateAccount",
       params: [BINANCE_ADDRESS],
     });
 
     const binanceSigner = await ethers.getSigner(BINANCE_ADDRESS);
+    
+    // Fund FlashLoan contract with DAI for fees
     const fundAmount = ethers.parseUnits("10000", 18);
     await daiContract.connect(binanceSigner).transfer(contractAddress, fundAmount);
 
-    console.log("Contract funded with DAI");
+    // Fund DEXs with WETH and DAI for trading
+    const dexFundAmount = ethers.parseUnits("50000", 18);
+    const dexAAddress = await dexA.getAddress();
+    const dexBAddress = await dexB.getAddress();
+    
+    await daiContract.connect(binanceSigner).transfer(dexAAddress, dexFundAmount);
+    await daiContract.connect(binanceSigner).transfer(dexBAddress, dexFundAmount);
+    
+    // Fund WETH (need to get from another whale)
+    const WETH_WHALE = "0x8EB8a3b98659Cce290402893d0123abb75E3ab28"; // Another whale
+    await network.provider.request({
+      method: "hardhat_impersonateAccount",
+      params: [WETH_WHALE],
+    });
+    const wethSigner = await ethers.getSigner(WETH_WHALE);
+    
+    const wethFundAmount = ethers.parseUnits("100", 18); // 100 WETH
+    await wethContract.connect(wethSigner).transfer(dexAAddress, wethFundAmount);
+    await wethContract.connect(wethSigner).transfer(dexBAddress, wethFundAmount);
+
+    console.log("Contracts funded with DAI and WETH");
   });
 
   /**
