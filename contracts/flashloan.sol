@@ -107,6 +107,7 @@ contract FlashLoan is FlashLoanSimpleReceiverBase {
     IERC20 private weth;
 
     mapping(address => bool) public authorizedSigners;
+    mapping(bytes32 => bool) public usedSignatures;
 
     // Outro constructor pra nao da erro nos testes
     constructor(address _addressProvider, address dex1Address, address dex2Address)
@@ -239,6 +240,7 @@ contract FlashLoan is FlashLoanSimpleReceiverBase {
         bytes32 ethSignedHash = getEthSignedMessageHash(messageHash);
         address signer = recoverSigner(ethSignedHash, _signature);
 
+        require(!usedSignatures[ethSignedHash], "Signature already used");
         require(authorizedSigners[signer], "Unauthorized signer");
 
         // Executar o flash loan após verificação
@@ -255,6 +257,7 @@ contract FlashLoan is FlashLoanSimpleReceiverBase {
             params,
             referralCode
         );
+        usedSignatures[ethSignedHash] = true;
     }
 
     function getEthSignedMessageHash(bytes32 _messageHash) public pure returns (bytes32) {
