@@ -19,16 +19,16 @@ describe("Flashloan Arbitrage (DEX AMM)", function () {
 
   beforeEach(async function () {
     [owner] = await ethers.getSigners();
-     // Reset the previous transactions, was having issues with whale running out of dai
+
     await hre.network.provider.request({
-    method: "hardhat_reset",
-    params: [{
-      forking: {
-        jsonRpcUrl: process.env.MAINNET_RPC_URL,
-        blockNumber: 18000000
-      }
-    }]
-  });
+      method: "hardhat_reset",
+      params: [{
+        forking: {
+          jsonRpcUrl: process.env.MAINNET_RPC_URL,
+          blockNumber: 18000000
+        }
+      }]
+    });
 
     dai = await ethers.getContractAt(
       "@aave/core-v3/contracts/dependencies/openzeppelin/contracts/IERC20.sol:IERC20",
@@ -61,7 +61,7 @@ describe("Flashloan Arbitrage (DEX AMM)", function () {
     await dexB.waitForDeployment();
 
     // Transfer enough tokens for all liquidity
-    await dai.connect(daiWhale).transfer(owner.address, ethers.parseUnits("300000", 18));
+    await dai.connect(daiWhale).transfer(owner.address, ethers.parseUnits("800000", 18));
     await weth.connect(wethWhale).transfer(owner.address, ethers.parseUnits("150", 18));
 
     // Add liquidity to both dexes
@@ -78,83 +78,84 @@ describe("Flashloan Arbitrage (DEX AMM)", function () {
     await arb.waitForDeployment();
   });
 
- it("Should perform DAI → WETH → DAI arbitrage via flashloan and make profit", async function () {
-  const flashloanAmount = ethers.parseUnits("1000", 18);
+  it("Should perform DAI → WETH → DAI arbitrage via flashloan and make profit", async function () {
+    const flashloanAmount = ethers.parseUnits("1000", 18);
 
-  // Important logs BEFORE flashloan
-  const daiBefore = await dai.balanceOf(arb.target);
-  const dexAPriceBefore = await dexA.getPrice();
-  const dexBPriceBefore = await dexB.getPrice();
+    // Slippage: 1% = 100 bps
+    const maxSlippageBps = 100;
 
-  console.log("Before:");
-  console.log("  Arb DAI balance:", ethers.formatUnits(daiBefore, 18));
-  console.log("  DexA price:", ethers.formatUnits(dexAPriceBefore, 18));
-  console.log("  DexB price:", ethers.formatUnits(dexBPriceBefore, 18));
+    const daiBefore = await dai.balanceOf(arb.target);
+    const dexAPriceBefore = await dexA.getPrice();
+    const dexBPriceBefore = await dexB.getPrice();
 
-  // Execute flashloan
-  const tx = await arb.requestFlashLoan(DAI_ADDRESS, flashloanAmount);
-  await tx.wait();
+    console.log("Before:");
+    console.log("  Arb DAI balance:", ethers.formatUnits(daiBefore, 18));
+    console.log("  DexA price:", ethers.formatUnits(dexAPriceBefore, 18));
+    console.log("  DexB price:", ethers.formatUnits(dexBPriceBefore, 18));
 
-  // Important logs AFTER flashloan
-  const daiAfter = await dai.balanceOf(arb.target);
-  const dexAPriceAfter = await dexA.getPrice();
-  const dexBPriceAfter = await dexB.getPrice();
+    // Execute flashloan with params
+    const tx = await arb.requestFlashLoan(DAI_ADDRESS, flashloanAmount, maxSlippageBps);
+    await tx.wait();
 
-  console.log("After:");
-  console.log("  Arb DAI balance:", ethers.formatUnits(daiAfter, 18));
-  console.log("  DexA price:", ethers.formatUnits(dexAPriceAfter, 18));
-  console.log("  DexB price:", ethers.formatUnits(dexBPriceAfter, 18));
+    const daiAfter = await dai.balanceOf(arb.target);
+    const dexAPriceAfter = await dexA.getPrice();
+    const dexBPriceAfter = await dexB.getPrice();
 
-  expect(daiAfter).to.be.gt(daiBefore);
-});
+    console.log("After:");
+    console.log("  Arb DAI balance:", ethers.formatUnits(daiAfter, 18));
+    console.log("  DexA price:", ethers.formatUnits(dexAPriceAfter, 18));
+    console.log("  DexB price:", ethers.formatUnits(dexBPriceAfter, 18));
 
+    expect(daiAfter).to.be.gt(daiBefore);
+  });
 
   it("Should perform WETH → DAI → WETH arbitrage and make profit", async function () {
-  // Add extra liquidity to DexA
-  await dai.connect(owner).approve(dexA.target, ethers.parseUnits("50000", 18));
-  await weth.connect(owner).approve(dexA.target, ethers.parseUnits("25", 18));
-  await dexA.connect(owner).addLiquidity(ethers.parseUnits("50000", 18), ethers.parseUnits("25", 18));
+    await dai.connect(owner).approve(dexA.target, ethers.parseUnits("50000", 18));
+    await weth.connect(owner).approve(dexA.target, ethers.parseUnits("25", 18));
+    await dexA.connect(owner).addLiquidity(ethers.parseUnits("50000", 18), ethers.parseUnits("25", 18));
 
-  const priceA = await dexA.getPrice();
-  const priceB = await dexB.getPrice();
-  console.log("DexA:", ethers.formatUnits(priceA, 18));
-  console.log("DexB:", ethers.formatUnits(priceB, 18));
+    const priceA = await dexA.getPrice();
+    const priceB = await dexB.getPrice();
+    console.log("DexA:", ethers.formatUnits(priceA, 18));
+    console.log("DexB:", ethers.formatUnits(priceB, 18));
 
-  const flashloanAmount = ethers.parseUnits("10", 18);
-  const wethBefore = await weth.balanceOf(arb.target);
+    const flashloanAmount = ethers.parseUnits("10", 18);
+    const maxSlippageBps = 100;
 
-  const tx = await arb.requestFlashLoan(WETH_ADDRESS, flashloanAmount);
-  await tx.wait();
+    const wethBefore = await weth.balanceOf(arb.target);
 
-  const wethAfter = await weth.balanceOf(arb.target);
-  console.log("WETH before:", ethers.formatUnits(wethBefore, 18));
-  console.log("WETH after:", ethers.formatUnits(wethAfter, 18));
+    // Execute flashloan with params
+    const tx = await arb.requestFlashLoan(WETH_ADDRESS, flashloanAmount, maxSlippageBps);
+    await tx.wait();
 
-  expect(wethAfter).to.be.gt(wethBefore);
-});
+    const wethAfter = await weth.balanceOf(arb.target);
+    console.log("WETH before:", ethers.formatUnits(wethBefore, 18));
+    console.log("WETH after:", ethers.formatUnits(wethAfter, 18));
 
+    expect(wethAfter).to.be.gt(wethBefore);
+  });
 
   it("Should revert when arbitrage is not profitable", async function () {
     const priceABefore = await dexA.getPrice();
-  const priceBBefore = await dexB.getPrice();
-  console.log("DexA:", ethers.formatUnits(priceABefore, 18));
-  console.log("DexB:", ethers.formatUnits(priceBBefore, 18));
-  // Change liquidity, thus changing price
-  await dai.connect(owner).approve(dexA.target, ethers.parseUnits("50000", 18));
-  await weth.connect(owner).approve(dexA.target, ethers.parseUnits("5", 18));
-  await dexA.connect(owner).addLiquidity(ethers.parseUnits("50000", 18), ethers.parseUnits("5", 18));
+    const priceBBefore = await dexB.getPrice();
+    console.log("DexA:", ethers.formatUnits(priceABefore, 18));
+    console.log("DexB:", ethers.formatUnits(priceBBefore, 18));
 
-  const priceA = await dexA.getPrice();
-  const priceB = await dexB.getPrice();
-  console.log("DexA:", ethers.formatUnits(priceA, 18));
-  console.log("DexB:", ethers.formatUnits(priceB, 18));
+    await dai.connect(owner).approve(dexA.target, ethers.parseUnits("50000", 18));
+    await weth.connect(owner).approve(dexA.target, ethers.parseUnits("5", 18));
+    await dexA.connect(owner).addLiquidity(ethers.parseUnits("50000", 18), ethers.parseUnits("5", 18));
 
-  const flashloanAmount = ethers.parseUnits("10", 18);
+    const priceA = await dexA.getPrice();
+    const priceB = await dexB.getPrice();
+    console.log("DexA:", ethers.formatUnits(priceA, 18));
+    console.log("DexB:", ethers.formatUnits(priceB, 18));
 
-  await expect(
-    arb.requestFlashLoan(WETH_ADDRESS, flashloanAmount)
-  ).to.be.revertedWith("Arbitrage not profitable");
+    const flashloanAmount = ethers.parseUnits("10", 18);
+    const maxSlippageBps = 100;
 
-});
+    await expect(
+      arb.requestFlashLoan(WETH_ADDRESS, flashloanAmount, maxSlippageBps)
+    ).to.be.revertedWith("Arbitrage not profitable");
+  });
 
 });

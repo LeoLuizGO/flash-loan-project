@@ -11,6 +11,8 @@ interface IDex {
     function buyDAI(uint256 wethAmount) external returns (uint256);
     function sellDAI(uint256 daiAmount) external returns (uint256);
     function getPrice() external view returns (uint256);
+    function getDAIBalance() external view returns (uint256);
+    function getWETHBalance() external view returns (uint256);
 }
 
 
@@ -40,8 +42,10 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
         uint256 amount,
         uint256 premium,
         address /*initiator*/,
-        bytes calldata /*params*/
+        bytes calldata params
     ) external override returns (bool) {
+
+        uint256 maxSlippageBps = abi.decode(params, (uint256));
 
         // DAI -> WETH -> DAI
         if (asset == daiAddress) {
@@ -56,14 +60,29 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
             uint256 wethReceived;
             uint256 daiFinal;
 
+
             if (dexAPrice > dexBPrice) {
-                // buy WETH on DexA
+                uint256 daiReserve = dexA.getDAIBalance();
+                uint256 wethReserve = dexA.getWETHBalance();
+                uint256 daiInWithFee = (daiAmount * 997) / 1000;
+                uint256 expectedWethOut = (wethReserve * daiInWithFee) / (daiReserve + daiInWithFee);
+                uint256 minWethOut = (expectedWethOut * (10000 - maxSlippageBps)) / 10000;
+
                 wethReceived = dexA.buyWETH(daiAmount);
+                require(wethReceived >= minWethOut, "Slippage too high");
+
                 weth.approve(address(dexB), wethReceived);
                 daiFinal = dexB.sellWETH(wethReceived);
-
             } else {
+                uint256 daiReserve = dexB.getDAIBalance();
+                uint256 wethReserve = dexB.getWETHBalance();
+                uint256 daiInWithFee = (daiAmount * 997) / 1000;
+                uint256 expectedWethOut = (wethReserve * daiInWithFee) / (daiReserve + daiInWithFee);
+                uint256 minWethOut = (expectedWethOut * (10000 - maxSlippageBps)) / 10000;
+
                 wethReceived = dexB.buyWETH(daiAmount);
+                require(wethReceived >= minWethOut, "Slippage too high");
+
                 weth.approve(address(dexA), wethReceived);
                 daiFinal = dexA.sellWETH(wethReceived);
             }
@@ -86,12 +105,30 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
                 uint256 daiReceived;
                 uint256 wethFinal;
 
+
+
                 if (dexAPrice < dexBPrice) {
+                    uint256 daiReserve = dexA.getDAIBalance();
+                    uint256 wethReserve = dexA.getWETHBalance();
+                    uint256 wethInWithFee = (wethAmount * 997) / 1000;
+                    uint256 expectedDaiOut = (daiReserve * wethInWithFee) / (wethReserve + wethInWithFee);
+                    uint256 minDaiOut = (expectedDaiOut * (10000 - maxSlippageBps)) / 10000;
+
                     daiReceived = dexA.buyDAI(wethAmount);
+                    require(daiReceived >= minDaiOut, "Slippage too high");
+
                     dai.approve(address(dexB), daiReceived);
                     wethFinal = dexB.sellDAI(daiReceived);
                 } else {
+                    uint256 daiReserve = dexB.getDAIBalance();
+                    uint256 wethReserve = dexB.getWETHBalance();
+                    uint256 wethInWithFee = (wethAmount * 997) / 1000;
+                    uint256 expectedDaiOut = (daiReserve * wethInWithFee) / (wethReserve + wethInWithFee);
+                    uint256 minDaiOut = (expectedDaiOut * (10000 - maxSlippageBps)) / 10000;
+
                     daiReceived = dexB.buyDAI(wethAmount);
+                    require(daiReceived >= minDaiOut, "Slippage too high");
+
                     dai.approve(address(dexA), daiReceived);
                     wethFinal = dexA.sellDAI(daiReceived);
                 }
@@ -105,8 +142,9 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
         return true;
     }
 
-    function requestFlashLoan(address _token, uint256 _amount) public {
-        POOL.flashLoanSimple(address(this), _token, _amount, "", 0);
+    function requestFlashLoan(address _token, uint256 _amount, uint256  _maxSlippageBps) public {
+        bytes memory params = abi.encode(_maxSlippageBps);
+        POOL.flashLoanSimple(address(this), _token, _amount, params, 0);
     }
 
     function withdraw(address _tokenAddress) external {
