@@ -39,6 +39,9 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
     IERC20 private dai;
     IERC20 private weth;
 
+    mapping(address => bool) public authorizedSigners;
+    mapping(bytes32 => bool) public usedSignatures;
+
     constructor(address _addressProvider, address dex1Address, address dex2Address)
         FlashLoanSimpleReceiverBase(IPoolAddressesProvider(_addressProvider))
     {
@@ -47,6 +50,8 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
         dexB = IDex(dex2Address);
         dai = IERC20(daiAddress);
         weth = IERC20(wethAddress);
+
+        authorizedSigners[owner] = true;
     }
 
     /**
@@ -76,26 +81,12 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
             uint256 wethReceived;
             uint256 daiFinal;
 
+            // Price = WETH per DAI (quanto WETH você recebe por 1 DAI)
+            // Preço MAIOR = WETH mais BARATO (recebe mais WETH por DAI)
+            // Estratégia: Comprar onde preço é MAIOR, vender onde preço é MENOR
             if (dexAPrice > dexBPrice) {
-                // WETH mais barato na DEX B
-                uint256 daiReserve = dexB.getDAIBalance();
-                uint256 wethReserve = dexB.getWETHBalance();
-                uint256 daiInWithFee = (daiAmount * 997) / 1000;
-                uint256 expectedWethOut = (wethReserve * daiInWithFee) / (daiReserve + daiInWithFee);
-                uint256 minWethOut = (expectedWethOut * (10000 - maxSlippageBps)) / 10000;
-
-                wethReceived = dexB.buyWETH(daiAmount, minWethOut);
-
-                daiReserve = dexA.getDAIBalance();
-                wethReserve = dexA.getWETHBalance();
-                uint256 wethInWithFee = (wethReceived * 997) / 1000;
-                uint256 expectedDaiOut = (daiReserve * wethInWithFee) / (wethReserve + wethInWithFee);
-                uint256 minDaiOut = (expectedDaiOut * (10000 - maxSlippageBps)) / 10000;
-
-                weth.approve(address(dexA), wethReceived);
-                daiFinal = dexA.sellWETH(wethReceived, minDaiOut);
-            } else {
-                // WETH mais barato na DEX A
+                // WETH mais BARATO na DEX A (comprar aqui)
+                // WETH mais CARO na DEX B (vender aqui)
                 uint256 daiReserve = dexA.getDAIBalance();
                 uint256 wethReserve = dexA.getWETHBalance();
                 uint256 daiInWithFee = (daiAmount * 997) / 1000;
@@ -112,6 +103,25 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
 
                 weth.approve(address(dexB), wethReceived);
                 daiFinal = dexB.sellWETH(wethReceived, minDaiOut);
+            } else {
+                // WETH mais BARATO na DEX B (comprar aqui)
+                // WETH mais CARO na DEX A (vender aqui)
+                uint256 daiReserve = dexB.getDAIBalance();
+                uint256 wethReserve = dexB.getWETHBalance();
+                uint256 daiInWithFee = (daiAmount * 997) / 1000;
+                uint256 expectedWethOut = (wethReserve * daiInWithFee) / (daiReserve + daiInWithFee);
+                uint256 minWethOut = (expectedWethOut * (10000 - maxSlippageBps)) / 10000;
+
+                wethReceived = dexB.buyWETH(daiAmount, minWethOut);
+
+                daiReserve = dexA.getDAIBalance();
+                wethReserve = dexA.getWETHBalance();
+                uint256 wethInWithFee = (wethReceived * 997) / 1000;
+                uint256 expectedDaiOut = (daiReserve * wethInWithFee) / (wethReserve + wethInWithFee);
+                uint256 minDaiOut = (expectedDaiOut * (10000 - maxSlippageBps)) / 10000;
+
+                weth.approve(address(dexA), wethReceived);
+                daiFinal = dexA.sellWETH(wethReceived, minDaiOut);
             }
 
             uint256 totalDebt = daiAmount + premium;
@@ -132,15 +142,19 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
             uint256 daiReceived;
             uint256 wethFinal;
 
+            // Price = WETH per DAI
+            // Preço BAIXO = DAI vale MAIS (recebe menos WETH por DAI)
+            // Estratégia: Vender WETH onde preço é BAIXO (recebe mais DAI), comprar onde é ALTO
             if (dexAPrice < dexBPrice) {
-                // DAI mais barato na DEX A
+                // DexA: preço BAIXO (DAI vale mais aqui) - VENDER WETH aqui
+                // DexB: preço ALTO (DAI vale menos) - COMPRAR WETH aqui
                 uint256 daiReserve = dexA.getDAIBalance();
                 uint256 wethReserve = dexA.getWETHBalance();
                 uint256 wethInWithFee = (wethAmount * 997) / 1000;
                 uint256 expectedDaiOut = (daiReserve * wethInWithFee) / (wethReserve + wethInWithFee);
                 uint256 minDaiOut = (expectedDaiOut * (10000 - maxSlippageBps)) / 10000;
 
-                daiReceived = dexA.buyDAI(wethAmount, minDaiOut);
+                daiReceived = dexA.sellWETH(wethAmount, minDaiOut);
 
                 daiReserve = dexB.getDAIBalance();
                 wethReserve = dexB.getWETHBalance();
@@ -149,16 +163,17 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
                 uint256 minWethOut = (expectedWethOut * (10000 - maxSlippageBps)) / 10000;
 
                 dai.approve(address(dexB), daiReceived);
-                wethFinal = dexB.sellDAI(daiReceived, minWethOut);
+                wethFinal = dexB.buyWETH(daiReceived, minWethOut);
             } else {
-                // DAI mais barato na DEX B
+                // DexB: preço BAIXO (DAI vale mais aqui) - VENDER WETH aqui  
+                // DexA: preço ALTO (DAI vale menos) - COMPRAR WETH aqui
                 uint256 daiReserve = dexB.getDAIBalance();
                 uint256 wethReserve = dexB.getWETHBalance();
                 uint256 wethInWithFee = (wethAmount * 997) / 1000;
                 uint256 expectedDaiOut = (daiReserve * wethInWithFee) / (wethReserve + wethInWithFee);
                 uint256 minDaiOut = (expectedDaiOut * (10000 - maxSlippageBps)) / 10000;
 
-                daiReceived = dexB.buyDAI(wethAmount, minDaiOut);
+                daiReceived = dexB.sellWETH(wethAmount, minDaiOut);
 
                 daiReserve = dexA.getDAIBalance();
                 wethReserve = dexA.getWETHBalance();
@@ -167,7 +182,7 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
                 uint256 minWethOut = (expectedWethOut * (10000 - maxSlippageBps)) / 10000;
 
                 dai.approve(address(dexA), daiReceived);
-                wethFinal = dexA.sellDAI(daiReceived, minWethOut);
+                wethFinal = dexA.buyWETH(daiReceived, minWethOut);
             }
             
             uint256 totalDebt = wethAmount + premium;
@@ -179,16 +194,69 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
         return true;
     }
 
-    function requestFlashLoan(address _token, uint256 _amount, uint256  _maxSlippageBps) public {
-        bytes memory params = abi.encode(_maxSlippageBps);
-        POOL.flashLoanSimple(address(this), _token, _amount, params, 0);
+    function addSigner(address _signer) external onlyOwner {
+        authorizedSigners[_signer] = true;
     }
 
-    /**
-     * @notice Saca tokens do contrato
-     */
+    function requestFlashLoan(address _token, uint256 _amount, uint256  _maxSlippageBps, uint256 _nonce, bytes memory _signature) public {
+        bytes32 messageHash = keccak256(abi.encodePacked(
+            _token,
+            _amount, 
+            _nonce,
+            address(this)
+        ));
+        bytes32 ethSignedHash = getEthSignedMessageHash(messageHash);
+        address signer = recoverSigner(ethSignedHash, _signature);
+
+        require(!usedSignatures[ethSignedHash], "Signature already used");
+        require(authorizedSigners[signer], "Unauthorized signer");
+
+        bytes memory params = abi.encode(_maxSlippageBps);
+        POOL.flashLoanSimple(address(this), _token, _amount, params, 0);
+    
+        usedSignatures[ethSignedHash] = true;
+    }
+
+    function getEthSignedMessageHash(bytes32 _messageHash) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", _messageHash));
+    }
+
+    function recoverSigner(
+        bytes32 _ethSignedMessageHash,
+        bytes memory _signature
+    ) public pure returns (address) {
+        (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
+        return ecrecover(_ethSignedMessageHash, v, r, s);
+    }
+
+    function splitSignature(bytes memory sig)
+        public
+        pure
+        returns (
+            bytes32 r,
+            bytes32 s,
+            uint8 v
+        )
+    {
+        require(sig.length == 65, "invalid signature length");
+
+        assembly {
+            r := mload(add(sig, 32))
+            s := mload(add(sig, 64))
+            v := byte(0, mload(add(sig, 96)))
+        }
+    }
+ 
     function withdraw(address _tokenAddress) external onlyOwner {
         IERC20(_tokenAddress).transfer(msg.sender, IERC20(_tokenAddress).balanceOf(address(this)));
+    }
+
+    modifier onlyOwner() {
+        require(
+            msg.sender == owner,
+            "Only the contract owner can call this function"
+        );
+        _;
     }
 
     receive() external payable {}

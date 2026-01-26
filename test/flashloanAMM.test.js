@@ -64,14 +64,17 @@ describe("Flashloan Arbitrage (DEX AMM)", function () {
     await dai.connect(daiWhale).transfer(owner.address, ethers.parseUnits("800000", 18));
     await weth.connect(wethWhale).transfer(owner.address, ethers.parseUnits("150", 18));
 
-    // Add liquidity to both dexes
+    // Add liquidity to both dexes with different ratios to create arbitrage opportunity
+    // DexA: 100,000 DAI / 50 WETH = 2,000 DAI per WETH (expensive WETH)
     await dai.connect(owner).approve(dexA.target, ethers.parseUnits("100000", 18));
     await weth.connect(owner).approve(dexA.target, ethers.parseUnits("50", 18));
     await dexA.connect(owner).addLiquidity(ethers.parseUnits("100000", 18), ethers.parseUnits("50", 18));
 
-    await dai.connect(owner).approve(dexB.target, ethers.parseUnits("150000", 18));
+    // DexB: 200,000 DAI / 50 WETH = 4,000 DAI per WETH (cheap WETH) 
+    // Bigger difference for profitable arbitrage
+    await dai.connect(owner).approve(dexB.target, ethers.parseUnits("200000", 18));
     await weth.connect(owner).approve(dexB.target, ethers.parseUnits("50", 18));
-    await dexB.connect(owner).addLiquidity(ethers.parseUnits("150000", 18), ethers.parseUnits("50", 18));
+    await dexB.connect(owner).addLiquidity(ethers.parseUnits("200000", 18), ethers.parseUnits("50", 18));
 
     const FlashLoan = await ethers.getContractFactory("FlashLoanAMM");
     arb = await FlashLoan.deploy(POOL_ADDRESS_PROVIDER, dexA.target, dexB.target);
