@@ -1,0 +1,10 @@
+{
+  "network": "localhost",
+  "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "timestamp": "2026-01-26T22:47:36.960Z",
+  "contracts": {
+    "dexA": "0xa85EffB2658CFd81e0B1AaD4f2364CdBCd89F3a1",
+    "dexB": "0x8aAC5570d54306Bb395bf2385ad327b7b706016b",
+    "flashLoan": "0x64f5219563e28EeBAAd91Ca8D31fa3b36621FD4f"
+  }
+}

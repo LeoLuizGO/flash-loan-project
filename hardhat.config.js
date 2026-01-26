@@ -42,12 +42,16 @@ export default {
   },
   networks: {
     hardhat: {
-      type: "edr-simulated",
       forking: {
         // Sua URL da Alchemy
         url: process.env.MAINNET_RPC_URL || "",
         blockNumber: 18000000, // Pin a block for consistency
       },
+      // Set initial base fee to avoid gas price issues with mainnet fork
+      initialBaseFeePerGas: 0,
+    },
+    localhost: {
+      url: "http://127.0.0.1:8545",
     },
   },
   mocha: {

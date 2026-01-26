@@ -1,180 +1,121 @@
-import { useState, useEffect } from 'react';
-import { ethers } from 'ethers';
+import { useState, useCallback } from 'react';
 import './App.css';
 
-// Importar ABI do FlashLoanAMM
-import FlashLoanABI from './frontend/src/contracts/FlashLoan.json';
+// Hooks
+import { useWallet } from './hooks/useWallet';
+import { useContracts } from './hooks/useContracts';
+import { useFlashLoan } from './hooks/useFlashLoan';
 
-const RPC_URL = 'http://127.0.0.1:8545';
-const FLASH_LOAN_ADDRESS = '0x64f5219563e28EeBAAd91Ca8D31fa3b36621FD4f'; 
-const DAI_ADDRESS = '0x6B175474E89094C44Da98b954EedeAC495271d0F';
-const WETH_ADDRESS = '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2';
+// Components
+import {
+  DexInfoPanel,
+  FlashLoanForm,
+  ProfitCalculator,
+  TransactionHistory,
+  StatusMessage,
+  InfoSection,
+} from './components';
 
-interface FlashLoanParams {
-  token: string;
-  amount: string;
-}
+// Utils
+import { formatAddress } from './utils/formatters';
+import { DAI_ADDRESS } from './utils/constants';
 
 function App() {
-  const [account, setAccount] = useState<string>('');
-  const [provider, setProvider] = useState<ethers.BrowserProvider | null>(null);
-  const [signer, setSigner] = useState<ethers.Signer | null>(null);
-  const [contract, setContract] = useState<ethers.Contract | null>(null);
-  
-  const [selectedToken, setSelectedToken] = useState<string>(DAI_ADDRESS);
-  const [loanAmount, setLoanAmount] = useState<string>('');
-  const [maxSlippage, setMaxSlippage] = useState<string>('100');
-  const [loading, setLoading] = useState<boolean>(false);
-  const [txStatus, setTxStatus] = useState<string>('');
-  const [signature, setSignature] = useState<string>('');
-  const [nonce, setNonce] = useState<number>(0);
+  // Wallet connection
+  const {
+    account,
+    provider,
+    signer,
+    isConnected,
+    connect,
+    disconnect,
+    isConnecting,
+    error: walletError,
+  } = useWallet();
 
-  useEffect(() => {
-    // Removida a reconexão automática
-    // Agora só conecta quando o usuário clicar no botão
-  }, []);
+  // Contract instances and AMM info
+  const {
+    flashLoanContract,
+    ammInfo,
+    isLoading: isLoadingAMM,
+    error: contractError,
+    refreshAMMInfo,
+  } = useContracts(signer, provider);
 
-  const connectWallet = async () => {
-    try {
-      if (typeof window.ethereum === 'undefined') {
-        alert('Por favor, instale o MetaMask!');
-        return;
+  // Flash loan operations
+  const {
+    nonce,
+    signature,
+    isLoading: isLoadingFlashLoan,
+    error: flashLoanError,
+    transactions,
+    generateSignature,
+    executeFlashLoan,
+    clearError,
+  } = useFlashLoan(flashLoanContract, signer, account);
+
+  // Local state for form
+  const [selectedToken, setSelectedToken] = useState(DAI_ADDRESS);
+  const [amount, setAmount] = useState('');
+  const [slippage, setSlippage] = useState(100);
+  const [statusMessage, setStatusMessage] = useState('');
+  const [statusType, setStatusType] = useState<'success' | 'error' | 'info'>('info');
+
+  // Handle signature generation
+  const handleGenerateSignature = useCallback(
+    async (token: string, amt: string) => {
+      setSelectedToken(token);
+      setAmount(amt);
+      setStatusMessage('Generating signature...');
+      setStatusType('info');
+
+      const sig = await generateSignature(token, amt);
+
+      if (sig) {
+        setStatusMessage('Signature generated successfully!');
+        setStatusType('success');
+      } else {
+        setStatusMessage('Failed to generate signature');
+        setStatusType('error');
       }
 
-      // Força a MetaMask a mostrar o popup de seleção de contas
-      await window.ethereum.request({
-        method: 'wallet_requestPermissions',
-        params: [{ eth_accounts: {} }]
-      });
-
-      const web3Provider = new ethers.BrowserProvider(window.ethereum);
-      const web3Signer = await web3Provider.getSigner();
-      const address = await web3Signer.getAddress();
-      
-      const flashLoanContract = new ethers.Contract(
-        FLASH_LOAN_ADDRESS,
-        FlashLoanABI,
-        web3Signer
-      );
-
-      setProvider(web3Provider);
-      setSigner(web3Signer);
-      setAccount(address);
-      setContract(flashLoanContract);
-      setTxStatus('Carteira conectada com sucesso!');
-    } catch (error) {
-      console.error('Erro ao conectar carteira:', error);
-      setTxStatus('Erro ao conectar carteira');
-    }
-  };
-
-  const generateSignature = async () => {
-    if (!signer || !loanAmount) {
-      alert('Conecte sua carteira e insira o valor do empréstimo');
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      // Incrementar nonce para prevenir replay attacks
-      const currentNonce = nonce + 1;
-      setNonce(currentNonce);
-
-      // Criar a mensagem para assinatura seguindo o padrão EIP-712
-      const domain = {
-        name: 'FlashLoanAMM',
-        version: '1',
-        chainId: await signer.provider!.getNetwork().then(net => net.chainId),
-        verifyingContract: FLASH_LOAN_ADDRESS
-      };
-
-      const types = {
-        FlashLoanRequest: [
-          { name: 'user', type: 'address' },
-          { name: 'token', type: 'address' },
-          { name: 'amount', type: 'uint256' },
-          { name: 'nonce', type: 'uint256' }
-        ]
-      };
-
-      const value = {
-        user: account,
-        token: selectedToken,
-        amount: ethers.parseEther(loanAmount),
-        nonce: currentNonce
-      };
-
-      // Assinar a mensagem usando EIP-712
-      const sig = await signer.signTypedData(domain, types, value);
-      setSignature(sig);
-      setTxStatus('Assinatura gerada com sucesso!');
-      
       return sig;
-    } catch (error) {
-      console.error('Erro ao gerar assinatura:', error);
-      setTxStatus('Erro ao gerar assinatura');
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    [generateSignature]
+  );
 
-  const executeFlashLoan = async () => {
-    if (!contract || !signer || !loanAmount || !signature) {
-      alert('Por favor, conecte a carteira, insira o valor e gere a assinatura');
-      return;
-    }
+  // Handle flash loan execution
+  const handleExecuteFlashLoan = useCallback(
+    async (token: string, amt: string, slippageBps: number, sig?: string) => {
+      setSelectedToken(token);
+      setAmount(amt);
+      setSlippage(slippageBps);
+      setStatusMessage('Executing flash loan...');
+      setStatusType('info');
 
-    try {
-      setLoading(true);
-      setTxStatus('Executando flash loan...');
+      const success = await executeFlashLoan(token, amt, slippageBps, sig);
 
-      const amount = ethers.parseEther(loanAmount);
-      const slippageBps = parseInt(maxSlippage); 
+      if (success) {
+        setStatusMessage('Flash loan executed successfully!');
+        setStatusType('success');
+      } else {
+        setStatusMessage(flashLoanError || 'Flash loan failed');
+        setStatusType('error');
+      }
 
+      return success;
+    },
+    [executeFlashLoan, flashLoanError]
+  );
 
-      console.log("Signature:", signature);
+  // Clear status message
+  const handleClearStatus = useCallback(() => {
+    setStatusMessage('');
+    clearError();
+  }, [clearError]);
 
-      // Chamar a função requestFlashLoan com a assinatura
-      const tx = await contract.requestFlashLoan(
-        selectedToken,    // 1. _token
-        amount,           // 2. _amount
-        slippageBps,      // 3. _maxSlippageBps ← ADICIONADO!
-        nonce,            // 4. _nonce
-        signature         // 5. _signature
-      );
-
-      setTxStatus('Transação enviada. Aguardando confirmação...');
-      
-      const receipt = await tx.wait();
-      
-      setTxStatus(`Flash Loan executado com sucesso! Hash: ${receipt.hash}`);
-      console.log('Transaction receipt:', receipt);
-    } catch (error: any) {
-      console.error('Erro ao executar flash loan:', error);
-      setTxStatus(`Erro: ${error.message || 'Falha ao executar flash loan'}`);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const disconnectWallet = async () => {
-    try {
-      // Limpar o estado local
-      setAccount('');
-      setProvider(null);
-      setSigner(null);
-      setContract(null);
-      setSignature('');
-      setNonce(0);
-      setTxStatus('Carteira desconectada');
-      
-      // Recarregar a página para resetar completamente
-      window.location.reload();
-    } catch (error) {
-      console.error('Erro ao desconectar:', error);
-    }
-  };
+  // Combined error message
+  const errorMessage = walletError || contractError || flashLoanError;
 
   return (
     <div className="App">
@@ -183,8 +124,8 @@ function App() {
           <img src="/insa-logo.png" alt="INSA Lyon" className="insa-logo" />
         </div>
         <div className="header-center">
-          <h1>Flash Loan Site</h1>
-          <p>Sistema de Flash Loan com Blockchain e Criptografia</p>
+          <h1>Flash Loan AMM</h1>
+          <p>Arbitrage System with Cryptographic Authentication</p>
         </div>
         <div className="header-right">
           <div className="token-icons">
@@ -195,123 +136,88 @@ function App() {
       </header>
 
       <main className="main-content">
-        {!account ? (
+        {!isConnected ? (
           <div className="connect-section">
-            <h2>Conecte sua Carteira</h2>
-            <button 
-              onClick={connectWallet} 
+            <h2>Connect Your Wallet</h2>
+            <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+              Connect MetaMask to interact with the Flash Loan contracts
+            </p>
+            <button
+              onClick={connect}
               className="connect-button"
+              disabled={isConnecting}
             >
-              Conectar MetaMask
+              {isConnecting ? (
+                <>
+                  <span className="spinner" />
+                  Connecting...
+                </>
+              ) : (
+                'Connect MetaMask'
+              )}
             </button>
+            {walletError && (
+              <p style={{ color: 'var(--error)', marginTop: '1rem' }}>{walletError}</p>
+            )}
           </div>
         ) : (
           <div className="flash-loan-interface">
+            {/* Account Info */}
             <div className="account-info">
               <div className="account-details">
-                <h3>Conta Conectada</h3>
-                <p className="account-address">
-                  {account.substring(0, 6)}...{account.substring(38)}
-                </p>
+                <h3>Connected Account</h3>
+                <p className="account-address">{formatAddress(account)}</p>
               </div>
-              <button 
-                onClick={disconnectWallet} 
-                className="disconnect-button"
-                title="Desconectar Carteira"
-              >
-                🚪 Sair
+              <button onClick={disconnect} className="disconnect-button">
+                Disconnect
               </button>
             </div>
 
-            <div className="loan-form">
-              <h2>Configurar Flash Loan</h2>
-              
-              <div className="form-group">
-                <label>Token:</label>
-                <select 
-                  value={selectedToken} 
-                  onChange={(e) => setSelectedToken(e.target.value)}
-                  className="token-select"
-                >
-                  <option value={DAI_ADDRESS}>DAI</option>
-                  <option value={WETH_ADDRESS}>WETH</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label>Valor (em unidades do token):</label>
-                <input
-                  type="number"
-                  value={loanAmount}
-                  onChange={(e) => setLoanAmount(e.target.value)}
-                  placeholder="Ex: 1000"
-                  className="amount-input"
-                  step="0.01"
-                  min="0"
-                />
-              </div>
-
-              <div className="form-group">
-                <label>Nonce (proteção contra replay):</label>
-                <input
-                  type="number"
-                  value={nonce}
-                  readOnly
-                  className="nonce-input"
-                />
-              </div>
-
-              <div className="button-group">
-                <button
-                  onClick={generateSignature}
-                  disabled={loading || !loanAmount}
-                  className="sign-button"
-                >
-                  {loading ? 'Gerando...' : 'Gerar Assinatura'}
-                </button>
-
-                <button
-                  onClick={executeFlashLoan}
-                  disabled={loading || !signature}
-                  className="execute-button"
-                >
-                  {loading ? 'Executando...' : 'Executar Flash Loan'}
-                </button>
-              </div>
-
-              {signature && (
-                <div className="signature-display">
-                  <h4>Assinatura Gerada:</h4>
-                  <p className="signature-text">
-                    {signature.substring(0, 20)}...{signature.substring(signature.length - 20)}
-                  </p>
-                </div>
-              )}
-            </div>
-
-            {txStatus && (
-              <div className={`status-message ${txStatus.includes('sucesso') ? 'success' : txStatus.includes('Erro') ? 'error' : 'info'}`}>
-                <h3>Status:</h3>
-                <p>{txStatus}</p>
-              </div>
+            {/* Status Message */}
+            {(statusMessage || errorMessage) && (
+              <StatusMessage
+                message={errorMessage || statusMessage}
+                type={errorMessage ? 'error' : statusType}
+                onClose={handleClearStatus}
+              />
             )}
 
-            <div className="info-section">
-              <h3>Como Funciona</h3>
-              <ul>
-                <li><strong>Flash Loan:</strong> Empréstimo instantâneo sem garantia que deve ser devolvido na mesma transação</li>
-                <li><strong>Criptografia:</strong> Usa assinatura digital ECDSA (EIP-712) para autorizar operações</li>
-                <li><strong>Arbitragem:</strong> O contrato executa arbitragem entre DEXs para lucro</li>
-                <li><strong>Segurança:</strong> Sistema de nonce previne replay attacks</li>
-              </ul>
-            </div>
+            {/* DEX Information Panel */}
+            <DexInfoPanel
+              ammInfo={ammInfo}
+              isLoading={isLoadingAMM}
+              onRefresh={refreshAMMInfo}
+            />
+
+            {/* Flash Loan Form */}
+            <FlashLoanForm
+              onGenerateSignature={handleGenerateSignature}
+              onExecuteFlashLoan={handleExecuteFlashLoan}
+              signature={signature}
+              nonce={nonce}
+              isLoading={isLoadingFlashLoan}
+            />
+
+            {/* Profit Calculator */}
+            <ProfitCalculator
+              ammInfo={ammInfo}
+              selectedToken={selectedToken}
+              amount={amount}
+              slippageBps={slippage}
+            />
+
+            {/* Transaction History */}
+            <TransactionHistory transactions={transactions} />
+
+            {/* Info Section */}
+            <InfoSection />
           </div>
         )}
       </main>
 
       <footer className="App-footer">
-        <p>Desenvolvido para INSA Lyon - Disciplina de Blockchain</p>
-        <p>Flash Loan com Criptografia • Aave V3 • Ethereum</p>
+        <p>Developed for INSA Lyon - Blockchain Course</p>
+        <p>Flash Loan with Cryptography - Aave V3 - Ethereum</p>
       </footer>
     </div>
   );

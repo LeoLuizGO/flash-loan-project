@@ -42,6 +42,8 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
     mapping(address => bool) public authorizedSigners;
     mapping(bytes32 => bool) public usedSignatures;
 
+    event FlashLoanExecuted(address indexed token, uint256 amount, uint256 profit, address indexed initiator);
+
     constructor(address _addressProvider, address dex1Address, address dex2Address)
         FlashLoanSimpleReceiverBase(IPoolAddressesProvider(_addressProvider))
     {
@@ -201,7 +203,7 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
     function requestFlashLoan(address _token, uint256 _amount, uint256  _maxSlippageBps, uint256 _nonce, bytes memory _signature) public {
         bytes32 messageHash = keccak256(abi.encodePacked(
             _token,
-            _amount, 
+            _amount,
             _nonce,
             address(this)
         ));
@@ -211,9 +213,18 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
         require(!usedSignatures[ethSignedHash], "Signature already used");
         require(authorizedSigners[signer], "Unauthorized signer");
 
+        // Track balance before flash loan to calculate profit
+        uint256 balanceBefore = IERC20(_token).balanceOf(address(this));
+
         bytes memory params = abi.encode(_maxSlippageBps);
         POOL.flashLoanSimple(address(this), _token, _amount, params, 0);
-    
+
+        // Calculate profit (balance after - balance before)
+        uint256 balanceAfter = IERC20(_token).balanceOf(address(this));
+        uint256 profit = balanceAfter > balanceBefore ? balanceAfter - balanceBefore : 0;
+
+        emit FlashLoanExecuted(_token, _amount, profit, msg.sender);
+
         usedSignatures[ethSignedHash] = true;
     }
 
