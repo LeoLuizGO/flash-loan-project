@@ -1,0 +1,160 @@
+[
+  {
+    "inputs": [
+      {"internalType": "address", "name": "_addressProvider", "type": "address"},
+      {"internalType": "address", "name": "dex1Address", "type": "address"},
+      {"internalType": "address", "name": "dex2Address", "type": "address"}
+    ],
+    "stateMutability": "nonpayable",
+    "type": "constructor"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {"indexed": true, "internalType": "address", "name": "user", "type": "address"},
+      {"indexed": true, "internalType": "address", "name": "token", "type": "address"},
+      {"indexed": false, "internalType": "uint256", "name": "amount", "type": "uint256"},
+      {"indexed": false, "internalType": "uint256", "name": "profit", "type": "uint256"}
+    ],
+    "name": "FlashLoanExecuted",
+    "type": "event"
+  },
+  {
+    "inputs": [],
+    "name": "ADDRESSES_PROVIDER",
+    "outputs": [{"internalType": "contract IPoolAddressesProvider", "name": "", "type": "address"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "DOMAIN_SEPARATOR",
+    "outputs": [{"internalType": "bytes32", "name": "", "type": "bytes32"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "FLASHLOAN_REQUEST_TYPEHASH",
+    "outputs": [{"internalType": "bytes32", "name": "", "type": "bytes32"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "POOL",
+    "outputs": [{"internalType": "contract IPool", "name": "", "type": "address"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "_signer", "type": "address"}],
+    "name": "addSigner",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "", "type": "address"}],
+    "name": "authorizedSigners",
+    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "dexA",
+    "outputs": [{"internalType": "contract IDex", "name": "", "type": "address"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "dexB",
+    "outputs": [{"internalType": "contract IDex", "name": "", "type": "address"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "address", "name": "asset", "type": "address"},
+      {"internalType": "uint256", "name": "amount", "type": "uint256"},
+      {"internalType": "uint256", "name": "premium", "type": "uint256"},
+      {"internalType": "address", "name": "initiator", "type": "address"},
+      {"internalType": "bytes", "name": "params", "type": "bytes"}
+    ],
+    "name": "executeOperation",
+    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "getAMMInfo",
+    "outputs": [
+      {"internalType": "uint256", "name": "priceA", "type": "uint256"},
+      {"internalType": "uint256", "name": "priceB", "type": "uint256"},
+      {"internalType": "uint256", "name": "daiBalanceA", "type": "uint256"},
+      {"internalType": "uint256", "name": "wethBalanceA", "type": "uint256"},
+      {"internalType": "uint256", "name": "daiBalanceB", "type": "uint256"},
+      {"internalType": "uint256", "name": "wethBalanceB", "type": "uint256"}
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [],
+    "name": "owner",
+    "outputs": [{"internalType": "address payable", "name": "", "type": "address"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "bytes32", "name": "_digest", "type": "bytes32"},
+      {"internalType": "bytes", "name": "_signature", "type": "bytes"}
+    ],
+    "name": "recoverSigner",
+    "outputs": [{"internalType": "address", "name": "", "type": "address"}],
+    "stateMutability": "pure",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "_signer", "type": "address"}],
+    "name": "removeSigner",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {"internalType": "address", "name": "_token", "type": "address"},
+      {"internalType": "uint256", "name": "_amount", "type": "uint256"},
+      {"internalType": "uint256", "name": "_maxSlippageBps", "type": "uint256"},
+      {"internalType": "uint256", "name": "_nonce", "type": "uint256"},
+      {"internalType": "bytes", "name": "_signature", "type": "bytes"}
+    ],
+    "name": "requestFlashLoan",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "bytes32", "name": "", "type": "bytes32"}],
+    "name": "usedSignatures",
+    "outputs": [{"internalType": "bool", "name": "", "type": "bool"}],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [{"internalType": "address", "name": "_tokenAddress", "type": "address"}],
+    "name": "withdraw",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "stateMutability": "payable",
+    "type": "receive"
+  }
+]
