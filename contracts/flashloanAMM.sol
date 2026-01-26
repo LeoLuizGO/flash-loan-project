@@ -6,10 +6,10 @@ import {IPoolAddressesProvider} from "@aave/core-v3/contracts/interfaces/IPoolAd
 import {IERC20} from "@aave/core-v3/contracts/dependencies/openzeppelin/contracts/IERC20.sol";
 
 interface IDex {
-    function buyWETH(uint256 daiAmount) external returns (uint256);
-    function sellWETH(uint256 wethAmount) external returns (uint256);
-    function buyDAI(uint256 wethAmount) external returns (uint256);
-    function sellDAI(uint256 daiAmount) external returns (uint256);
+    function buyWETH(uint256 daiAmount, uint256 minWethOut) external returns (uint256);
+    function sellWETH(uint256 wethAmount, uint256 minDaiOut) external returns (uint256);
+    function buyDAI(uint256 wethAmount, uint256 minDaiOut) external returns (uint256);
+    function sellDAI(uint256 daiAmount, uint256 minWethOut) external returns (uint256);
     function getPrice() external view returns (uint256);
     function getDAIBalance() external view returns (uint256);
     function getWETHBalance() external view returns (uint256);
@@ -68,11 +68,16 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
                 uint256 expectedWethOut = (wethReserve * daiInWithFee) / (daiReserve + daiInWithFee);
                 uint256 minWethOut = (expectedWethOut * (10000 - maxSlippageBps)) / 10000;
 
-                wethReceived = dexA.buyWETH(daiAmount);
-                require(wethReceived >= minWethOut, "Slippage too high");
+                wethReceived = dexA.buyWETH(daiAmount, minWethOut);
+
+                 daiReserve = dexB.getDAIBalance();
+                 wethReserve = dexB.getWETHBalance();
+                uint256 wethInWithFee = (wethReceived * 997) / 1000;
+                uint256 expectedDaiOut = (daiReserve * wethInWithFee) / (wethReserve + wethInWithFee);
+                uint256 minDaiOut = (expectedDaiOut * (10000 - maxSlippageBps)) / 10000;
 
                 weth.approve(address(dexB), wethReceived);
-                daiFinal = dexB.sellWETH(wethReceived);
+                daiFinal = dexB.sellWETH(wethReceived, minDaiOut);
             } else {
                 uint256 daiReserve = dexB.getDAIBalance();
                 uint256 wethReserve = dexB.getWETHBalance();
@@ -80,11 +85,16 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
                 uint256 expectedWethOut = (wethReserve * daiInWithFee) / (daiReserve + daiInWithFee);
                 uint256 minWethOut = (expectedWethOut * (10000 - maxSlippageBps)) / 10000;
 
-                wethReceived = dexB.buyWETH(daiAmount);
-                require(wethReceived >= minWethOut, "Slippage too high");
+                wethReceived = dexB.buyWETH(daiAmount, minWethOut);
+
+                 daiReserve = dexA.getDAIBalance();
+                 wethReserve = dexA.getWETHBalance();
+                uint256 wethInWithFee = (wethReceived * 997) / 1000;
+                uint256 expectedDaiOut = (daiReserve * wethInWithFee) / (wethReserve + wethInWithFee);
+                uint256 minDaiOut = (expectedDaiOut * (10000 - maxSlippageBps)) / 10000;
 
                 weth.approve(address(dexA), wethReceived);
-                daiFinal = dexA.sellWETH(wethReceived);
+                daiFinal = dexA.sellWETH(wethReceived, minDaiOut);
             }
 
             uint256 totalDebt = daiAmount + premium;
@@ -114,11 +124,16 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
                     uint256 expectedDaiOut = (daiReserve * wethInWithFee) / (wethReserve + wethInWithFee);
                     uint256 minDaiOut = (expectedDaiOut * (10000 - maxSlippageBps)) / 10000;
 
-                    daiReceived = dexA.buyDAI(wethAmount);
-                    require(daiReceived >= minDaiOut, "Slippage too high");
+                    daiReceived = dexA.buyDAI(wethAmount, minDaiOut);
+
+                     daiReserve = dexB.getDAIBalance();
+                     wethReserve = dexB.getWETHBalance();
+                    uint256 daiInWithFee = (daiReceived * 997) / 1000;
+                    uint256 expectedWethOut = (wethReserve * daiInWithFee) / (daiReserve + daiInWithFee);
+                    uint256 minWethOut = (expectedWethOut * (10000 - maxSlippageBps)) / 10000;
 
                     dai.approve(address(dexB), daiReceived);
-                    wethFinal = dexB.sellDAI(daiReceived);
+                    wethFinal = dexB.sellDAI(daiReceived, minWethOut);
                 } else {
                     uint256 daiReserve = dexB.getDAIBalance();
                     uint256 wethReserve = dexB.getWETHBalance();
@@ -126,11 +141,16 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
                     uint256 expectedDaiOut = (daiReserve * wethInWithFee) / (wethReserve + wethInWithFee);
                     uint256 minDaiOut = (expectedDaiOut * (10000 - maxSlippageBps)) / 10000;
 
-                    daiReceived = dexB.buyDAI(wethAmount);
-                    require(daiReceived >= minDaiOut, "Slippage too high");
+                    daiReceived = dexB.buyDAI(wethAmount, minDaiOut);
+
+                     daiReserve = dexA.getDAIBalance();
+                     wethReserve = dexA.getWETHBalance();
+                    uint256 daiInWithFee = (daiReceived * 997) / 1000;
+                    uint256 expectedWethOut = (wethReserve * daiInWithFee) / (daiReserve + daiInWithFee);
+                    uint256 minWethOut = (expectedWethOut * (10000 - maxSlippageBps)) / 10000;
 
                     dai.approve(address(dexA), daiReceived);
-                    wethFinal = dexA.sellDAI(daiReceived);
+                    wethFinal = dexA.sellDAI(daiReceived, minWethOut);
                 }
             uint256 totalDebt = wethAmount + premium;
             require(wethFinal >= totalDebt, "Arbitrage not profitable");

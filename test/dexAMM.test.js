@@ -17,14 +17,15 @@ describe("DexAMM", function () {
 
     // Reset the previous transactions, was having issues with whale running out of dai
     await hre.network.provider.request({
-    method: "hardhat_reset",
-    params: [{
-      forking: {
-        jsonRpcUrl: process.env.MAINNET_RPC_URL,
-        blockNumber: 18000000
-      }
-    }]
-  });
+      method: "hardhat_reset",
+      params: [{
+        forking: {
+          jsonRpcUrl: process.env.MAINNET_RPC_URL,
+          blockNumber: 18000000
+        }
+      }]
+    });
+
     [owner, user] = await ethers.getSigners();
 
     dai = await ethers.getContractAt(
@@ -96,7 +97,8 @@ describe("DexAMM", function () {
 
     const wethBefore = await weth.balanceOf(user.address);
 
-    await dex.connect(user).buyWETH(daiIn);
+    // ✅ UPDATED: minWethOut = 0
+    await dex.connect(user).buyWETH(daiIn, 0);
 
     const wethAfter = await weth.balanceOf(user.address);
 
@@ -109,7 +111,6 @@ describe("DexAMM", function () {
     console.log("DEX reserves WETH:", ethers.formatEther(dexWethBefore), "→", ethers.formatEther(dexWethAfter));
     console.log("Price:", ethers.formatUnits(priceBefore, 18), "→", ethers.formatUnits(priceAfter, 18));
 
-
     expect(wethAfter).to.be.gt(wethBefore);
   });
 
@@ -121,7 +122,8 @@ describe("DexAMM", function () {
 
     const daiBefore = await dai.balanceOf(user.address);
 
-    await dex.connect(user).sellWETH(wethIn);
+    // ✅ UPDATED: minDaiOut = 0
+    await dex.connect(user).sellWETH(wethIn, 0);
 
     const daiAfter = await dai.balanceOf(user.address);
 
@@ -140,7 +142,8 @@ describe("DexAMM", function () {
     await dai.connect(daiWhale).transfer(user.address, daiIn);
     await dai.connect(user).approve(dex.target, daiIn);
 
-    await dex.connect(user).buyWETH(daiIn);
+    // ✅ UPDATED: minWethOut = 0
+    await dex.connect(user).buyWETH(daiIn, 0);
 
     const priceAfter = await dex.getPrice();
 
@@ -149,4 +152,21 @@ describe("DexAMM", function () {
 
     expect(priceAfter).to.not.equal(priceBefore);
   });
+
+  it("Should revert when slippage protection triggers", async function () {
+  const daiIn = ethers.parseUnits("1000", 18);
+
+  await dai.connect(daiWhale).transfer(user.address, daiIn);
+  await dai.connect(user).approve(dex.target, daiIn);
+
+  // Set minWethOut to an absurdly high value
+  const unrealisticMinWethOut = ethers.parseUnits("10", 18);
+
+  await expect(
+    dex.connect(user).buyWETH(daiIn, unrealisticMinWethOut)
+  ).to.be.reverted;
+});
+
+
+
 });

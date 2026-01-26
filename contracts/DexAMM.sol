@@ -5,6 +5,9 @@ import {IERC20} from "@aave/core-v3/contracts/dependencies/openzeppelin/contract
 
 contract DexAMM {
 
+
+
+    //3️⃣ Max trade size (anti-flash-loan) slippage protection and reentrancy guard
     address payable public owner;
 
     address private immutable daiAddress = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
@@ -49,15 +52,15 @@ contract DexAMM {
         wethBalance += wethAmount;
     }
 
-    // Avoid misalignment of variables
-    function sync() public {
-        daiBalance = dai.balanceOf(address(this));
-        wethBalance = weth.balanceOf(address(this));
-    }
+    // Avoid misalignment of variables (why did i put this here?)
+//    function sync() public {
+//        daiBalance = dai.balanceOf(address(this));
+//        wethBalance = weth.balanceOf(address(this));
+//    }
 
 
     //Buy WETH using DAI
-    function buyWETH(uint256 daiIn) public returns (uint256 wethOut) {
+    function buyWETH(uint256 daiIn, uint256 minWethOut) public returns (uint256 wethOut) {
         require(daiIn > 0, "No dai was given");
 
         //Already deduct the fee
@@ -66,20 +69,23 @@ contract DexAMM {
         // Calculate price dynamically
         wethOut = (wethBalance * daiInWithFee) / (daiBalance + daiInWithFee);
 
-        require(wethOut > 0, "wethOut is zero, something is wrong");
+
+        require(wethOut >= minWethOut, "Slippage too high");
         require(wethOut <= wethBalance, "Dex does not have enough weth");
 
-        dai.transferFrom(msg.sender, address(this), daiIn);
-        weth.transfer(msg.sender, wethOut);
 
         // Update the balances
         daiBalance += daiIn;
         wethBalance -= wethOut;
+
+        dai.transferFrom(msg.sender, address(this), daiIn);
+        weth.transfer(msg.sender, wethOut);
+
         return wethOut;
     }
 
     // Sell WETH for DAI
-    function sellWETH(uint256 wethIn) public returns (uint256 daiOut) {
+    function sellWETH(uint256 wethIn, uint256 minDaiOut) public returns (uint256 daiOut) {
         require(wethIn > 0, "No weth was given");
 
         // Already deduct the fee
@@ -87,28 +93,28 @@ contract DexAMM {
 
          daiOut = (daiBalance * wethInWithFee) / (wethBalance + wethInWithFee);
 
-
-        require(daiOut > 0, "daiOut is zero, something went wrong output");
+        require(daiOut >= minDaiOut, "Slippage too high");
         require(daiOut <= daiBalance, "Dex does not have enought dai");
-
-        weth.transferFrom(msg.sender, address(this), wethIn);
-        dai.transfer(msg.sender, daiOut);
 
         // Update balances
         wethBalance += wethIn;
         daiBalance -= daiOut;
+
+
+        weth.transferFrom(msg.sender, address(this), wethIn);
+        dai.transfer(msg.sender, daiOut);
 
         return daiOut;
     }
 
 
     // Aliases
-    function buyDAI(uint256 wethIn) external returns (uint256) {
-        return sellWETH(wethIn);
+    function buyDAI(uint256 wethIn, uint256 minDaiOut) external returns (uint256) {
+        return sellWETH(wethIn, minDaiOut);
     }
 
-    function sellDAI(uint256 daiIn) external returns (uint256) {
-        return buyWETH(daiIn);
+    function sellDAI(uint256 daiIn, uint256  minWethOut) external returns (uint256) {
+        return buyWETH(daiIn, minWethOut);
     }
 
 
@@ -121,12 +127,12 @@ contract DexAMM {
 
     // Gets the dexs dai balance
     function getDAIBalance() external view returns (uint256) {
-        return dai.balanceOf(address(this));
+        return daiBalance;
     }
 
     // Gets the dexs WETH balance
     function getWETHBalance() external view returns (uint256) {
-        return weth.balanceOf(address(this));
+        return wethBalance;
     }
 
 
