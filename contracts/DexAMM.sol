@@ -7,7 +7,7 @@ contract DexAMM {
 
 
 
-    //3️⃣ Max trade size (anti-flash-loan) slippage protection and reentrancy guard
+    //3️⃣ Max trade size (anti-flash-loan)
     address payable public owner;
 
     address private immutable daiAddress = 0x6B175474E89094C44Da98b954EedeAC495271d0F;
@@ -29,6 +29,15 @@ contract DexAMM {
 //    //Balances of the tokens
 //    mapping(address => uint256) public daiBalances;
 //    mapping(address => uint256) public wethBalances;
+
+    bool private locked;
+
+    modifier nonReentrant() {
+        require(!locked, "Reentrancy blocked");
+        locked = true;
+        _;
+        locked = false;
+    }
 
      modifier onlyOwner() {
         require(msg.sender == owner, "Only owner");
@@ -60,7 +69,7 @@ contract DexAMM {
 
 
     //Buy WETH using DAI
-    function buyWETH(uint256 daiIn, uint256 minWethOut) public returns (uint256 wethOut) {
+    function buyWETH(uint256 daiIn, uint256 minWethOut) public nonReentrant returns (uint256 wethOut) {
         require(daiIn > 0, "No dai was given");
 
         //Already deduct the fee
@@ -85,7 +94,7 @@ contract DexAMM {
     }
 
     // Sell WETH for DAI
-    function sellWETH(uint256 wethIn, uint256 minDaiOut) public returns (uint256 daiOut) {
+    function sellWETH(uint256 wethIn, uint256 minDaiOut) public nonReentrant returns (uint256 daiOut) {
         require(wethIn > 0, "No weth was given");
 
         // Already deduct the fee
