@@ -78,6 +78,19 @@ describe("Flashloan Arbitrage (DEX AMM)", function () {
     await arb.waitForDeployment();
   });
 
+  /**
+   * Helper function to create a signature
+   */
+  async function createSignature(signer, token, amount, nonce, contractAddress) {
+    const messageHash = ethers.solidityPackedKeccak256(
+      ["address", "uint256", "uint256", "address"],
+      [token, amount, nonce, contractAddress]
+    );
+
+    const signature = await signer.signMessage(ethers.getBytes(messageHash));
+    return signature;
+  }
+
   it("Should perform DAI → WETH → DAI arbitrage via flashloan and make profit", async function () {
     const flashloanAmount = ethers.parseUnits("1000", 18);
 
@@ -93,8 +106,18 @@ describe("Flashloan Arbitrage (DEX AMM)", function () {
     console.log("  DexA price:", ethers.formatUnits(dexAPriceBefore, 18));
     console.log("  DexB price:", ethers.formatUnits(dexBPriceBefore, 18));
 
+    // Create signature
+    const nonce = 1;
+    const signature = await createSignature(
+      owner,
+      DAI_ADDRESS,
+      flashloanAmount,
+      nonce,
+      arb.target
+    );
+
     // Execute flashloan with params
-    const tx = await arb.requestFlashLoan(DAI_ADDRESS, flashloanAmount, maxSlippageBps);
+    const tx = await arb.requestFlashLoan(DAI_ADDRESS, flashloanAmount, maxSlippageBps, nonce, signature);
     await tx.wait();
 
     const daiAfter = await dai.balanceOf(arb.target);
@@ -124,8 +147,18 @@ describe("Flashloan Arbitrage (DEX AMM)", function () {
 
     const wethBefore = await weth.balanceOf(arb.target);
 
+    // Create signature
+    const nonce = 1;
+    const signature = await createSignature(
+      owner,
+      WETH_ADDRESS,
+      flashloanAmount,
+      nonce,
+      arb.target
+    );
+
     // Execute flashloan with params
-    const tx = await arb.requestFlashLoan(WETH_ADDRESS, flashloanAmount, maxSlippageBps);
+    const tx = await arb.requestFlashLoan(WETH_ADDRESS, flashloanAmount, maxSlippageBps, nonce, signature);
     await tx.wait();
 
     const wethAfter = await weth.balanceOf(arb.target);
@@ -153,8 +186,18 @@ describe("Flashloan Arbitrage (DEX AMM)", function () {
     const flashloanAmount = ethers.parseUnits("10", 18);
     const maxSlippageBps = 100;
 
+    // Create signature
+    const nonce = 1;
+    const signature = await createSignature(
+      owner,
+      WETH_ADDRESS,
+      flashloanAmount,
+      nonce,
+      arb.target
+    );
+
     await expect(
-      arb.requestFlashLoan(WETH_ADDRESS, flashloanAmount, maxSlippageBps)
+      arb.requestFlashLoan(WETH_ADDRESS, flashloanAmount, maxSlippageBps, nonce, signature)
     ).to.be.revertedWith("Arbitrage not profitable");
   });
 

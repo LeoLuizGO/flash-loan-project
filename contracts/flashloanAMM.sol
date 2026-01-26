@@ -27,6 +27,9 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
     IERC20 private dai;
     IERC20 private weth;
 
+    mapping(address => bool) public authorizedSigners;
+    mapping(bytes32 => bool) public usedSignatures;
+
     constructor(address _addressProvider, address dex1Address, address dex2Address)
         FlashLoanSimpleReceiverBase(IPoolAddressesProvider(_addressProvider))
     {
@@ -35,6 +38,8 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
         dexB = IDex(dex2Address);
         dai = IERC20(daiAddress);
         weth = IERC20(wethAddress);
+        
+        authorizedSigners[owner] = true;
     }
 
     function executeOperation(
@@ -162,14 +167,69 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
         return true;
     }
 
-    function requestFlashLoan(address _token, uint256 _amount, uint256  _maxSlippageBps) public {
+    function addSigner(address _signer) external onlyOwner {
+        authorizedSigners[_signer] = true;
+    }
+
+    function requestFlashLoan(address _token, uint256 _amount, uint256  _maxSlippageBps, uint256 _nonce, bytes memory _signature) public {
+        bytes32 messageHash = keccak256(abi.encodePacked(
+            _token,
+            _amount, 
+            _nonce,
+            address(this)
+        ));
+        bytes32 ethSignedHash = getEthSignedMessageHash(messageHash);
+        address signer = recoverSigner(ethSignedHash, _signature);
+
+        require(!usedSignatures[ethSignedHash], "Signature already used");
+        require(authorizedSigners[signer], "Unauthorized signer");
+
         bytes memory params = abi.encode(_maxSlippageBps);
         POOL.flashLoanSimple(address(this), _token, _amount, params, 0);
+        usedSignatures[ethSignedHash] = true;
+    }
+
+    function getEthSignedMessageHash(bytes32 _messageHash) public pure returns (bytes32) {
+        return keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", _messageHash));
+    }
+
+    function recoverSigner(
+        bytes32 _ethSignedMessageHash,
+        bytes memory _signature
+    ) public pure returns (address) {
+        (bytes32 r, bytes32 s, uint8 v) = splitSignature(_signature);
+        return ecrecover(_ethSignedMessageHash, v, r, s);
+    }
+
+    function splitSignature(bytes memory sig)
+        public
+        pure
+        returns (
+            bytes32 r,
+            bytes32 s,
+            uint8 v
+        )
+    {
+        require(sig.length == 65, "invalid signature length");
+
+        assembly {
+            r := mload(add(sig, 32))
+            s := mload(add(sig, 64))
+            v := byte(0, mload(add(sig, 96)))
+        }
     }
 
     function withdraw(address _tokenAddress) external {
         require(msg.sender == owner, "Only owner");
         IERC20(_tokenAddress).transfer(msg.sender, IERC20(_tokenAddress).balanceOf(address(this)));
+    }
+
+    modifier onlyOwner() {
+        require(
+            msg.sender == owner,
+            "Only the contract owner can call this function"
+        );
+        _;
     }
 
     receive() external payable {}

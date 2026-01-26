@@ -55,11 +55,11 @@ describe("FlashLoan - Authentication Tests", function () {
     const binanceSigner = await ethers.getSigner(BINANCE_ADDRESS);
     
     // Fund FlashLoan contract with DAI for fees
-    const fundAmount = ethers.parseUnits("10000", 18);
+    const fundAmount = ethers.parseUnits("1000", 18);
     await daiContract.connect(binanceSigner).transfer(contractAddress, fundAmount);
 
     // Fund DEXs with WETH and DAI for trading
-    const dexFundAmount = ethers.parseUnits("50000", 18);
+    const dexFundAmount = ethers.parseUnits("5000", 18);
     const dexAAddress = await dexA.getAddress();
     const dexBAddress = await dexB.getAddress();
     
@@ -74,7 +74,7 @@ describe("FlashLoan - Authentication Tests", function () {
     });
     const wethSigner = await ethers.getSigner(WETH_WHALE);
     
-    const wethFundAmount = ethers.parseUnits("100", 18); // 100 WETH
+    const wethFundAmount = ethers.parseUnits("10", 18); // 10 WETH
     await wethContract.connect(wethSigner).transfer(dexAAddress, wethFundAmount);
     await wethContract.connect(wethSigner).transfer(dexBAddress, wethFundAmount);
 
@@ -255,24 +255,17 @@ describe("FlashLoan - Authentication Tests", function () {
       await expect(tx1).to.not.be.reverted;
       console.log("First execution succeeded");
 
-      // Try to replay the same signature - currently will succeed
-      // Note: To properly prevent this, you need to implement nonce tracking in the contract
-      const tx2 = await flashLoanContract.requestFlashLoan(
-        DAI_ADDRESS,
-        amountToBorrow,
-        nonce,
-        signature
-      );
+      // Try to replay the same signature - should be rejected
+      await expect(
+        flashLoanContract.requestFlashLoan(
+          DAI_ADDRESS,
+          amountToBorrow,
+          nonce,
+          signature
+        )
+      ).to.be.revertedWith("Signature already used");
 
-      // ⚠️ WARNING: Current implementation does NOT prevent replay attacks
-      // The signature will be valid again because there's no nonce tracking
-      // To fix this, the contract needs a mapping(address => uint256) public nonces;
-      // and check/increment it in requestFlashLoan
-      
-      console.log("REPLAY ATTACK POSSIBLE - Contract needs nonce tracking implementation");
-      console.log("   Add to contract: mapping(address => uint256) public usedNonces;");
-      console.log("   Check in requestFlashLoan: require(!usedNonces[nonce], 'Nonce already used');");
-      console.log("   Then: usedNonces[nonce] = true;");
+      console.log("✓ Replay attack successfully prevented - signature cannot be reused");
     });
 
     it("Should allow different nonces for same signer", async function () {

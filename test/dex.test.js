@@ -76,7 +76,7 @@ describe("Dex", function () {
     const daiBalance = await dex.getDAIBalance();
     console.log("Dai Balance:", daiBalance);
 
-    const fundDai = ethers.parseUnits("100000", 18);
+    const fundDai = ethers.parseUnits("5000", 18);
 
     await dai.connect(whaleDai).transfer(await dex.getAddress(), fundDai);
 
@@ -89,7 +89,7 @@ describe("Dex", function () {
     console.log("WETH balance in ETH:", ethers.formatEther(wethBalance), "ETH");
 
     // Wrap ETH to WETH using signer
-    const fundWeth = ethers.parseUnits("50", 18);
+    const fundWeth = ethers.parseUnits("5", 18);
     // Send ETH to WETH contract to wrap it
     await signer.sendTransaction({
       to: WETH_ADDRESS,
@@ -106,7 +106,7 @@ describe("Dex", function () {
 
   it("DEX buys WETH, pays with day", async function () {
     // Wrap ETH to WETH for the DEX
-    const fundWeth = ethers.parseUnits("600", 18);
+    const fundWeth = ethers.parseUnits("60", 18);
     await signer.sendTransaction({
       to: WETH_ADDRESS,
       value: fundWeth
@@ -117,7 +117,7 @@ describe("Dex", function () {
 
     console.log("DEX ETH balance:", ethers.formatEther(WETHBalance), "ETH");
 
-    const daiAmount = ethers.parseUnits("10000", 18);
+    const daiAmount = ethers.parseUnits("1000", 18);
 
     await dai.connect(whaleDai).transfer(signer.address, daiAmount);
     const DAIBalance = await dai.balanceOf(signer.address);
@@ -149,7 +149,7 @@ describe("Dex", function () {
   });
 it("DEX buys DAI, pays WETH to user", async function () {
   // Wrap ETH to WETH for the DEX
-  const fundWeth = ethers.parseUnits("50", 18);
+  const fundWeth = ethers.parseUnits("5", 18);
   await signer.sendTransaction({
     to: WETH_ADDRESS,
     value: fundWeth
@@ -159,7 +159,7 @@ it("DEX buys DAI, pays WETH to user", async function () {
   const dexDaiBefore = await dex.getDAIBalance();
   const dexWethBefore = await dex.getWETHBalance();
 
-  const daiAmount = ethers.parseUnits("10000", 18);
+  const daiAmount = ethers.parseUnits("1000", 18);
   await dai.connect(whaleDai).transfer(signer.address, daiAmount);
 
   const daiBefore = await dai.balanceOf(signer.address);
