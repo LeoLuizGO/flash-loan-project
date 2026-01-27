@@ -1,8 +1,8 @@
-# Flash Loan AMM Project 💸
+# Flash Loan AMM Project
 
 Flash Loan project with automated market maker (AMM) arbitrage, built with Hardhat and integrated with Aave V3 protocol. This project demonstrates the implementation of flash loans on Ethereum, enabling instant uncollateralized loans for arbitrage opportunities between DEXs.
 
-## 📋 About the Project
+## About the Project
 
 This project implements a Flash Loan smart contract with the following technologies:
 
@@ -15,7 +15,7 @@ This project implements a Flash Loan smart contract with the following technolog
 
 The `FlashLoanAMM.sol` contract extends `FlashLoanSimpleReceiverBase` from Aave and implements the necessary logic to execute flash loan operations with arbitrage between two AMM DEXs.
 
-## 🚀 Quick Start Guide
+## Quick Start Guide
 
 ### Prerequisites
 
@@ -104,7 +104,7 @@ npm start
 5. Click "Execute Flash Loan" (confirm in MetaMask)
 6. See your profit!
 
-## 🧪 Testing
+## Testing
 
 Run all tests:
 ```bash
@@ -120,7 +120,7 @@ npx hardhat test
 npx hardhat run scripts/test-flashloan.js --network localhost
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 flash-loan-project/
@@ -142,7 +142,7 @@ flash-loan-project/
 └── hardhat.config.js      # Hardhat configuration
 ```
 
-## 🔧 Useful Commands
+## Useful Commands
 
 ```bash
 # Compile contracts
@@ -170,7 +170,7 @@ npx hardhat run scripts/withdraw.js --network localhost
 npx hardhat run scripts/add-signer.js --network localhost
 ```
 
-## 🔍 Troubleshooting
+## Troubleshooting
 
 ### Error: "Arbitrage not profitable"
 ```bash
@@ -189,14 +189,14 @@ npx hardhat run scripts/create-arbitrage.js --network localhost
 - Check if Terminal 1 is running
 - Run full-setup.js again
 
-## 📚 Additional Resources
+## Additional Resources
 
 - [Hardhat Documentation](https://hardhat.org/docs)
 - [Aave V3 Docs](https://docs.aave.com/developers/)
 - [Solidity Documentation](https://docs.soliditylang.org/)
 - [Ethers.js Documentation](https://docs.ethers.org/)
 
-## ⚠️ Important Notes
+## Important Notes
 
 - This project is for educational purposes
 - Always test on testnets before using on mainnet
