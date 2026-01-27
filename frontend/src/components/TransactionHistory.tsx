@@ -15,9 +15,8 @@ export const TransactionHistory: React.FC<TransactionHistoryProps> = ({
       <div className="transaction-history card">
         <h3>Transaction History</h3>
         <div className="empty-state">
-          <div className="empty-state-icon">&#x1F4DD;</div>
           <p>No transactions yet</p>
-          <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+          <p style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.5rem' }}>
             Execute a flash loan to see your transaction history
           </p>
         </div>

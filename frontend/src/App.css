@@ -755,15 +755,35 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
+  width: 36px;
+  height: 36px;
 }
 
-.refresh-button:hover {
+.refresh-button:hover:not(:disabled) {
   border-color: var(--primary);
   color: var(--primary-light);
 }
 
-.refresh-button.spinning svg {
-  animation: spin 1s linear infinite;
+.refresh-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.refresh-button svg {
+  transition: transform 0.3s ease;
+}
+
+.refresh-button:hover:not(:disabled) svg {
+  transform: rotate(90deg);
+}
+
+.spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--border);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
 }
 
 /* Empty State */
@@ -773,10 +793,49 @@ body {
   color: var(--text-muted);
 }
 
-.empty-state-icon {
-  font-size: 3rem;
-  margin-bottom: 1rem;
-  opacity: 0.5;
+/* Section Header */
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+}
+
+.section-header h2 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.section-header h3 {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.section-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin: 0.5rem 0 0 0;
+}
+
+/* Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 1.5rem;
+  box-shadow: var(--shadow);
+  margin-bottom: 1.5rem;
+}
+
+.card h2, .card h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 1.5rem 0;
 }
 
 /* Responsive */
@@ -1004,22 +1063,23 @@ body {
 
 .withdraw-warning {
   text-align: center;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: var(--warning);
-  padding: 0.5rem;
+  padding: 0.75rem;
   background: rgba(245, 158, 11, 0.1);
   border: 1px solid rgba(245, 158, 11, 0.2);
-  border-radius: 6px;
+  border-radius: 8px;
+  font-weight: 500;
 }
 
 .withdraw-info {
   text-align: center;
-  font-size: 0.8rem;
-  color: var(--secondary);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
   padding: 0.75rem;
-  background: rgba(14, 165, 233, 0.1);
-  border: 1px solid rgba(14, 165, 233, 0.2);
-  border-radius: 6px;
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: 8px;
   line-height: 1.5;
 }
 
@@ -1043,40 +1103,6 @@ body {
   padding: 1.5rem;
   box-shadow: var(--shadow);
   margin-bottom: 1.5rem;
-}
-
-.wallet-balances .section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-}
-
-.refresh-button-small {
-  background: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-secondary);
-  padding: 0.5rem;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 1.2rem;
-  width: 36px;
-  height: 36px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.refresh-button-small:hover:not(:disabled) {
-  border-color: var(--primary);
-  color: var(--primary-light);
-  transform: rotate(90deg);
-}
-
-.refresh-button-small:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .balances-grid {
@@ -1158,11 +1184,11 @@ body {
 }
 
 .balance-note {
-  font-size: 0.8rem;
-  color: var(--secondary);
+  font-size: 0.875rem;
+  color: var(--text-secondary);
   padding: 0.75rem;
-  background: rgba(14, 165, 233, 0.1);
-  border: 1px solid rgba(14, 165, 233, 0.2);
+  background: rgba(148, 163, 184, 0.1);
+  border: 1px solid rgba(148, 163, 184, 0.2);
   border-radius: 8px;
   line-height: 1.5;
   text-align: center;
@@ -1404,6 +1430,27 @@ body {
   cursor: not-allowed;
 }
 
+.slippage-input {
+  background: var(--bg-dark);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem;
+  color: var(--text-primary);
+  font-size: 0.875rem;
+  transition: all 0.2s ease;
+}
+
+.slippage-input:focus {
+  outline: none;
+  border-color: var(--secondary);
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.1);
+}
+
+.slippage-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .swap-button {
   background: var(--gradient-2);
   color: white;
@@ -1437,9 +1484,11 @@ body {
 
 .swap-info {
   text-align: center;
-  font-size: 0.75rem;
+  font-size: 0.875rem;
   color: var(--text-muted);
-  padding: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(148, 163, 184, 0.05);
+  border-radius: 8px;
 }
 
 @media (max-width: 768px) {

@@ -16,18 +16,17 @@ export const DexInfoPanel: React.FC<DexInfoPanelProps> = ({
   if (!ammInfo) {
     return (
       <div className="card dex-info-panel">
-        <div className="card-header">
+        <div className="section-header">
           <h2>AMM Information</h2>
           <button
-            className={`refresh-button ${isLoading ? 'spinning' : ''}`}
+            className="refresh-button"
             onClick={onRefresh}
             disabled={isLoading}
           >
-            <RefreshIcon />
+            {isLoading ? <span className="spinner-small" /> : <RefreshIcon />}
           </button>
         </div>
         <div className="empty-state">
-          <div className="empty-state-icon">&#x1F4CA;</div>
           <p>Loading DEX information...</p>
         </div>
       </div>
@@ -38,15 +37,15 @@ export const DexInfoPanel: React.FC<DexInfoPanelProps> = ({
 
   return (
     <div className="card dex-info-panel">
-      <div className="card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <div className="section-header">
         <h2>AMM Information</h2>
         <button
-          className={`refresh-button ${isLoading ? 'spinning' : ''}`}
+          className="refresh-button"
           onClick={onRefresh}
           disabled={isLoading}
           title="Refresh prices"
         >
-          <RefreshIcon />
+          {isLoading ? <span className="spinner-small" /> : <RefreshIcon />}
         </button>
       </div>
 

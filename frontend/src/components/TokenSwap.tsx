@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { ethers } from 'ethers';
-import { DAI_ADDRESS, WETH_ADDRESS } from '../utils/constants';
+import { DAI_ADDRESS, WETH_ADDRESS, SLIPPAGE_PRESETS } from '../utils/constants';
 import { DexInfo } from '../types';
 
 interface TokenSwapProps {
@@ -13,12 +13,26 @@ interface TokenSwapProps {
 export function TokenSwap({ dexAContract, dexBContract, ammInfo, onSwapSuccess }: TokenSwapProps) {
   const [fromToken, setFromToken] = useState<'DAI' | 'WETH'>('DAI');
   const [amount, setAmount] = useState('');
-  const [slippage, setSlippage] = useState(1); // 1%
+  const [slippage, setSlippage] = useState(100); // 1% default (100 bps)
+  const [customSlippage, setCustomSlippage] = useState('');
   const [selectedDex, setSelectedDex] = useState<'A' | 'B'>('A');
   const [isSwapping, setIsSwapping] = useState(false);
   const [estimatedOutput, setEstimatedOutput] = useState('0');
 
   const toToken = fromToken === 'DAI' ? 'WETH' : 'DAI';
+
+  const handleSlippagePreset = (value: number) => {
+    setSlippage(value);
+    setCustomSlippage('');
+  };
+
+  const handleCustomSlippage = (value: string) => {
+    setCustomSlippage(value);
+    const parsed = parseFloat(value);
+    if (!isNaN(parsed) && parsed > 0 && parsed <= 50) {
+      setSlippage(Math.round(parsed * 100)); // Convert % to bps
+    }
+  };
 
   const calculateEstimatedOutput = () => {
     if (!ammInfo || !amount || parseFloat(amount) <= 0) {
@@ -71,8 +85,9 @@ export function TokenSwap({ dexAContract, dexBContract, ammInfo, onSwapSuccess }
     setIsSwapping(true);
     try {
       const amountIn = ethers.parseUnits(amount, 18);
+      const slippageFraction = slippage / 10000; // Convert bps to fraction
       const minAmountOut = ethers.parseUnits(
-        (parseFloat(estimatedOutput) * (1 - slippage / 100)).toString(),
+        (parseFloat(estimatedOutput) * (1 - slippageFraction)).toString(),
         18
       );
 
@@ -248,18 +263,34 @@ export function TokenSwap({ dexAContract, dexBContract, ammInfo, onSwapSuccess }
 
         {/* Slippage */}
         <div className="slippage-control">
-          <label>Slippage Tolerance: {slippage}%</label>
-          <div className="slippage-buttons">
-            {[0.5, 1, 2, 5].map((value) => (
+          <label>Max Slippage</label>
+          <div className="slippage-presets">
+            {SLIPPAGE_PRESETS.map((preset) => (
               <button
-                key={value}
-                className={`slippage-button ${slippage === value ? 'active' : ''}`}
-                onClick={() => setSlippage(value)}
+                key={preset.value}
+                type="button"
+                className={`slippage-preset ${slippage === preset.value && !customSlippage ? 'active' : ''}`}
+                onClick={() => handleSlippagePreset(preset.value)}
                 disabled={isSwapping}
               >
-                {value}%
+                {preset.label}
               </button>
             ))}
+          </div>
+          <input
+            type="number"
+            className="slippage-input"
+            value={customSlippage}
+            onChange={(e) => handleCustomSlippage(e.target.value)}
+            placeholder="Custom slippage %"
+            min="0.1"
+            max="50"
+            step="0.1"
+            style={{ marginTop: '0.5rem' }}
+            disabled={isSwapping}
+          />
+          <div style={{ fontSize: '0.875rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+            Current: {(slippage / 100).toFixed(2)}% ({slippage} bps)
           </div>
         </div>
 
@@ -280,7 +311,7 @@ export function TokenSwap({ dexAContract, dexBContract, ammInfo, onSwapSuccess }
         </button>
 
         <div className="swap-info">
-          ⓘ 0.3% fee applies to all swaps (Uniswap model)
+          0.3% fee applies to all swaps (Uniswap model)
         </div>
       </div>
     </div>

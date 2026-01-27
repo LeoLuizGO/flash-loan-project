@@ -136,12 +136,12 @@ export function WithdrawButton({ flashLoanContract, onWithdrawSuccess }: Withdra
           )}
         </button>
 
-        <div className="withdraw-warning">
-          ⚠️ Only the contract owner can withdraw funds
-        </div>
+        {/* <div className="withdraw-warning">
+          Only the contract owner can withdraw funds
+        </div> */}
 
         <div className="withdraw-info">
-          💡 <strong>Forked Network Note:</strong> After withdrawal, your tokens will appear in the "Your Wallet Balances" section above. 
+          <strong>Forked Network Note:</strong> After withdrawal, your tokens will appear in the "Your Wallet Balances" section above. 
           MetaMask cannot display mainnet tokens on localhost networks.
         </div>
       </div>

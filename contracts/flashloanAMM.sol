@@ -258,7 +258,7 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
         }
     }
  
-    function withdraw(address _tokenAddress) external onlyOwner {
+    function withdraw(address _tokenAddress) external onlyAuthorized {
         IERC20(_tokenAddress).transfer(msg.sender, IERC20(_tokenAddress).balanceOf(address(this)));
     }
 
@@ -266,6 +266,14 @@ contract FlashLoanAMM is FlashLoanSimpleReceiverBase {
         require(
             msg.sender == owner,
             "Only the contract owner can call this function"
+        );
+        _;
+    }
+
+    modifier onlyAuthorized() {
+        require(
+            msg.sender == owner || authorizedSigners[msg.sender],
+            "Only owner or authorized signers can call this function"
         );
         _;
     }

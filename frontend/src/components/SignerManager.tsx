@@ -36,7 +36,7 @@ export function SignerManager({ flashLoanContract, currentAccount }: SignerManag
 
     // Validate address
     if (!ethers.isAddress(newSignerAddress)) {
-      setMessage('❌ Invalid Ethereum address');
+      setMessage('Invalid Ethereum address');
       return;
     }
 
@@ -45,11 +45,11 @@ export function SignerManager({ flashLoanContract, currentAccount }: SignerManag
 
     try {
       const tx = await flashLoanContract.addSigner(newSignerAddress);
-      setMessage('⏳ Transaction pending...');
+      setMessage('Transaction pending...');
       
       await tx.wait();
       
-      setMessage(`✅ Successfully added ${newSignerAddress.slice(0, 6)}...${newSignerAddress.slice(-4)} as authorized signer!`);
+      setMessage(`Successfully added ${newSignerAddress.slice(0, 6)}...${newSignerAddress.slice(-4)} as authorized signer!`);
       setNewSignerAddress('');
       
       // Refresh status if adding self
@@ -58,7 +58,7 @@ export function SignerManager({ flashLoanContract, currentAccount }: SignerManag
       }
     } catch (error: any) {
       console.error('Error adding signer:', error);
-      setMessage(`❌ Error: ${error.reason || error.message || 'Transaction failed'}`);
+      setMessage(`Error: ${error.reason || error.message || 'Transaction failed'}`);
     } finally {
       setIsLoading(false);
     }
@@ -72,15 +72,15 @@ export function SignerManager({ flashLoanContract, currentAccount }: SignerManag
 
     try {
       const tx = await flashLoanContract.addSigner(currentAccount);
-      setMessage('⏳ Transaction pending...');
+      setMessage('Transaction pending...');
       
       await tx.wait();
       
-      setMessage('✅ Successfully authorized your account!');
+      setMessage('Successfully authorized your account!');
       await checkStatus();
     } catch (error: any) {
       console.error('Error adding self:', error);
-      setMessage(`❌ Error: ${error.reason || error.message || 'Transaction failed'}`);
+      setMessage(`Error: ${error.reason || error.message || 'Transaction failed'}`);
     } finally {
       setIsLoading(false);
     }
@@ -102,7 +102,7 @@ export function SignerManager({ flashLoanContract, currentAccount }: SignerManag
 
       {!isAuthorized && !isOwner && (
         <div className="auth-warning">
-          <p>⚠️ Your account is not authorized to execute flash loans.</p>
+          <p>Your account is not authorized to execute flash loans.</p>
           <p>Ask the contract owner to authorize your address.</p>
         </div>
       )}
