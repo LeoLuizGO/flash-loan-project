@@ -20,3 +20,6 @@
 /coverage
 .env
 
+# Local node files
+/frontend/node_modules/.cache
+/frontend/node_modules/.cache/default-development

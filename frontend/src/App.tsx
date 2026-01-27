@@ -15,6 +15,9 @@ import {
   StatusMessage,
   InfoSection,
   SignerManager,
+  WithdrawButton,
+  WalletBalances,
+  TokenSwap,
 } from './components';
 
 // Utils
@@ -37,6 +40,8 @@ function App() {
   // Contract instances and AMM info
   const {
     flashLoanContract,
+    dexAContract,
+    dexBContract,
     ammInfo,
     isLoading: isLoadingAMM,
     error: contractError,
@@ -198,6 +203,13 @@ function App() {
               currentAccount={account}
             />
 
+
+            {/* Wallet Balances */}
+            <WalletBalances
+              account={account}
+              provider={provider}
+            />
+
             {/* DEX Information Panel */}
             <DexInfoPanel
               ammInfo={ammInfo}
@@ -220,6 +232,20 @@ function App() {
               selectedToken={selectedToken}
               amount={amount}
               slippageBps={slippage}
+            />
+
+            {/* Token Swap */}
+            <TokenSwap
+              dexAContract={dexAContract}
+              dexBContract={dexBContract}
+              ammInfo={ammInfo}
+              onSwapSuccess={refreshAMMInfo}
+            />
+            
+            {/* Withdraw Button */}
+            <WithdrawButton
+              flashLoanContract={flashLoanContract}
+              onWithdrawSuccess={refreshAMMInfo}
             />
 
             {/* Transaction History */}
