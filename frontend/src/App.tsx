@@ -14,6 +14,7 @@ import {
   TransactionHistory,
   StatusMessage,
   InfoSection,
+  SignerManager,
 } from './components';
 
 // Utils
@@ -52,6 +53,7 @@ function App() {
     generateSignature,
     executeFlashLoan,
     clearError,
+    resetData,
   } = useFlashLoan(flashLoanContract, signer, account);
 
   // Local state for form
@@ -114,6 +116,14 @@ function App() {
     clearError();
   }, [clearError]);
 
+  // Handle disconnect with data cleanup
+  const handleDisconnect = useCallback(() => {
+    resetData();
+    setStatusMessage('');
+    setAmount('');
+    disconnect();
+  }, [resetData, disconnect]);
+
   // Combined error message
   const errorMessage = walletError || contractError || flashLoanError;
 
@@ -168,7 +178,7 @@ function App() {
                 <h3>Connected Account</h3>
                 <p className="account-address">{formatAddress(account)}</p>
               </div>
-              <button onClick={disconnect} className="disconnect-button">
+              <button onClick={handleDisconnect} className="disconnect-button">
                 Disconnect
               </button>
             </div>
@@ -181,6 +191,12 @@ function App() {
                 onClose={handleClearStatus}
               />
             )}
+
+            {/* Signer Manager */}
+            <SignerManager 
+              flashLoanContract={flashLoanContract}
+              currentAccount={account}
+            />
 
             {/* DEX Information Panel */}
             <DexInfoPanel

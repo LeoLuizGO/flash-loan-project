@@ -172,6 +172,14 @@ export function useFlashLoan(
     setError('');
   }, []);
 
+  const resetData = useCallback(() => {
+    setNonce(Math.floor(Date.now() / 1000));
+    setSignature('');
+    setError('');
+    setTransactions([]);
+    signedNonceRef.current = 0;
+  }, []);
+
   return {
     nonce,
     signature,
@@ -181,5 +189,6 @@ export function useFlashLoan(
     generateSignature,
     executeFlashLoan,
     clearError,
+    resetData,
   };
 }
