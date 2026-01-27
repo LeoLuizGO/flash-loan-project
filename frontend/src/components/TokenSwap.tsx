@@ -34,40 +34,55 @@ export function TokenSwap({ dexAContract, dexBContract, ammInfo, onSwapSuccess }
     }
   };
 
-  const calculateEstimatedOutput = () => {
-    if (!ammInfo || !amount || parseFloat(amount) <= 0) {
+  const calculateEstimatedOutput = (inputAmount?: string) => {
+    const amountToUse = inputAmount !== undefined ? inputAmount : amount;
+    
+    if (!ammInfo || !amountToUse || parseFloat(amountToUse) <= 0) {
       setEstimatedOutput('0');
       return;
     }
 
     const dex = selectedDex === 'A' ? ammInfo.dexA : ammInfo.dexB;
-    const amountIn = parseFloat(amount);
+    const amountIn = parseFloat(amountToUse);
+
+    console.log('=== Calculate Output Debug ===');
+    console.log('Amount in:', amountIn, fromToken);
+    console.log('Selected DEX:', selectedDex);
 
     try {
       if (fromToken === 'DAI') {
         // DAI -> WETH
         const daiReserve = Number(ethers.formatUnits(dex.daiBalance, 18));
         const wethReserve = Number(ethers.formatUnits(dex.wethBalance, 18));
+        console.log('DAI Reserve:', daiReserve);
+        console.log('WETH Reserve:', wethReserve);
+        
         const amountInWithFee = amountIn * 0.997; // 0.3% fee
         const output = (wethReserve * amountInWithFee) / (daiReserve + amountInWithFee);
+        console.log('Calculated output:', output.toFixed(6), 'WETH');
         setEstimatedOutput(output.toFixed(6));
       } else {
         // WETH -> DAI
         const daiReserve = Number(ethers.formatUnits(dex.daiBalance, 18));
         const wethReserve = Number(ethers.formatUnits(dex.wethBalance, 18));
+        console.log('DAI Reserve:', daiReserve);
+        console.log('WETH Reserve:', wethReserve);
+        
         const amountInWithFee = amountIn * 0.997; // 0.3% fee
         const output = (daiReserve * amountInWithFee) / (wethReserve + amountInWithFee);
+        console.log('Calculated output:', output.toFixed(2), 'DAI');
         setEstimatedOutput(output.toFixed(2));
       }
     } catch (error) {
       console.error('Error calculating output:', error);
       setEstimatedOutput('0');
     }
+    console.log('=============================');
   };
 
   const handleAmountChange = (value: string) => {
     setAmount(value);
-    setTimeout(() => calculateEstimatedOutput(), 100);
+    calculateEstimatedOutput(value); // Pass value directly instead of waiting for state update
   };
 
   const handleSwap = async () => {
@@ -86,10 +101,19 @@ export function TokenSwap({ dexAContract, dexBContract, ammInfo, onSwapSuccess }
     try {
       const amountIn = ethers.parseUnits(amount, 18);
       const slippageFraction = slippage / 10000; // Convert bps to fraction
+      const estimatedOutNum = parseFloat(estimatedOutput);
       const minAmountOut = ethers.parseUnits(
-        (parseFloat(estimatedOutput) * (1 - slippageFraction)).toString(),
+        (estimatedOutNum * (1 - slippageFraction)).toFixed(18),
         18
       );
+
+      console.log('=== Swap Debug Info ===');
+      console.log('Amount in:', amount, fromToken);
+      console.log('Estimated output:', estimatedOutput, toToken);
+      console.log('Slippage:', slippage, 'bps =', (slippage / 100).toFixed(2), '%');
+      console.log('Slippage fraction:', slippageFraction);
+      console.log('Min amount out:', ethers.formatUnits(minAmountOut, 18), toToken);
+      console.log('====================');
 
       let tx;
       const fromTokenAddress = fromToken === 'DAI' ? DAI_ADDRESS : WETH_ADDRESS;
@@ -153,12 +177,14 @@ export function TokenSwap({ dexAContract, dexBContract, ammInfo, onSwapSuccess }
   const getExchangeRate = () => {
     if (!ammInfo) return '0';
     const dex = selectedDex === 'A' ? ammInfo.dexA : ammInfo.dexB;
-    const price = Number(ethers.formatUnits(dex.price, 18));
+    // getPrice() returns WETH per 1 DAI (scaled by 1e18)
+    const wethPerDai = Number(ethers.formatUnits(dex.price, 18));
+    const daiPerWeth = 1 / wethPerDai;
     
     if (fromToken === 'DAI') {
-      return `1 DAI = ${price.toFixed(6)} WETH`;
+      return `1 DAI ≈ ${wethPerDai.toFixed(6)} WETH`;
     } else {
-      return `1 WETH = ${(1 / price).toFixed(2)} DAI`;
+      return `1 WETH ≈ ${daiPerWeth.toFixed(2)} DAI`;
     }
   };
 
@@ -180,14 +206,14 @@ export function TokenSwap({ dexAContract, dexBContract, ammInfo, onSwapSuccess }
               className={`dex-select-button ${selectedDex === 'A' ? 'active' : ''}`}
               onClick={() => {
                 setSelectedDex('A');
-                setTimeout(() => calculateEstimatedOutput(), 100);
+                setTimeout(() => calculateEstimatedOutput(), 50);
               }}
               disabled={isSwapping}
             >
               DEX A
               {ammInfo && (
                 <span className="dex-price">
-                  {Number(ethers.formatUnits(ammInfo.dexA.price, 18)).toFixed(6)} WETH/DAI
+                  1 WETH = {(1 / Number(ethers.formatUnits(ammInfo.dexA.price, 18))).toFixed(2)} DAI
                 </span>
               )}
             </button>
@@ -195,14 +221,14 @@ export function TokenSwap({ dexAContract, dexBContract, ammInfo, onSwapSuccess }
               className={`dex-select-button ${selectedDex === 'B' ? 'active' : ''}`}
               onClick={() => {
                 setSelectedDex('B');
-                setTimeout(() => calculateEstimatedOutput(), 100);
+                setTimeout(() => calculateEstimatedOutput(), 50);
               }}
               disabled={isSwapping}
             >
               DEX B
               {ammInfo && (
                 <span className="dex-price">
-                  {Number(ethers.formatUnits(ammInfo.dexB.price, 18)).toFixed(6)} WETH/DAI
+                  1 WETH = {(1 / Number(ethers.formatUnits(ammInfo.dexB.price, 18))).toFixed(2)} DAI
                 </span>
               )}
             </button>
