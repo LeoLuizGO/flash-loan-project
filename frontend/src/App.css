@@ -463,6 +463,27 @@ body {
   transform: none;
 }
 
+.sign-button:disabled:not(.loading) {
+  opacity: 0.5;
+}
+
+/* Loading state for sign button - make it more visible */
+.sign-button:disabled {
+  opacity: 0.9;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 0.9;
+    box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.7);
+  }
+  50% {
+    opacity: 1;
+    box-shadow: 0 0 20px 5px rgba(99, 102, 241, 0.3);
+  }
+}
+
 /* Signature Display */
 .signature-display {
   margin-top: 1rem;

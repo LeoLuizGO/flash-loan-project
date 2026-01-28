@@ -51,7 +51,7 @@ export const FlashLoanForm: React.FC<FlashLoanFormProps> = ({
       alert('Please generate a signature first');
       return;
     }
-    await onExecuteFlashLoan(selectedToken, amount, slippage);
+    await onExecuteFlashLoan(selectedToken, amount, slippage, signature);
   };
 
   const tokenSymbol = selectedToken === DAI_ADDRESS ? 'DAI' : 'WETH';
