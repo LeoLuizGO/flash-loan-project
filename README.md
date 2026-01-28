@@ -29,7 +29,7 @@ Before starting, make sure you have:
 
 ```bash
 cd Desktop
-git clone <REPO_URL>
+git clone https://github.com/LeoLuizGO/flash-loan-project.git
 cd flash-loan-project
 
 # Create .env file with your Alchemy key

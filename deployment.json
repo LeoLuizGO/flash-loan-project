@@ -1,7 +1,7 @@
 {
   "network": "localhost",
   "deployer": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
-  "timestamp": "2026-01-28T13:54:21.051Z",
+  "timestamp": "2026-01-28T22:13:31.667Z",
   "contracts": {
     "dexA": "0xa85EffB2658CFd81e0B1AaD4f2364CdBCd89F3a1",
     "dexB": "0x8aAC5570d54306Bb395bf2385ad327b7b706016b",
