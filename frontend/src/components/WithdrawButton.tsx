@@ -70,7 +70,7 @@ export function WithdrawButton({ flashLoanContract, onWithdrawSuccess }: Withdra
         errorMsg = err.message;
       }
       
-      alert(`❌ Withdrawal failed: ${errorMsg}`);
+      alert(`Withdrawal failed: ${errorMsg}`);
     } finally {
       setIsWithdrawing(false);
     }
