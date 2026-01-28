@@ -82,13 +82,13 @@ function App() {
         setStatusMessage('Signature generated successfully!');
         setStatusType('success');
       } else {
-        setStatusMessage('Failed to generate signature');
+        setStatusMessage(flashLoanError || 'Failed to generate signature - check MetaMask');
         setStatusType('error');
       }
 
       return sig;
     },
-    [generateSignature]
+    [generateSignature, flashLoanError]
   );
 
   // Handle flash loan execution

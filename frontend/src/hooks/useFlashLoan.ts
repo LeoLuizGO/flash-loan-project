@@ -40,15 +40,30 @@ export function useFlashLoan(
           [token, amountWei, currentNonce, FLASH_LOAN_ADDRESS]
         );
 
-        // Sign with personal_sign (adds Ethereum prefix)
-        const sig = await signer.signMessage(ethers.getBytes(messageHash));
+        // Sign with personal_sign (adds Ethereum prefix) with timeout
+        const signaturePromise = signer.signMessage(ethers.getBytes(messageHash));
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('Signature request timed out after 60 seconds. Please check MetaMask.')), 60000)
+        );
+
+        const sig = await Promise.race([signaturePromise, timeoutPromise]);
 
         setSignature(sig);
         setNonce(currentNonce + 1);
         return sig;
       } catch (err: any) {
         console.error('Error generating signature:', err);
-        setError(err.message || 'Failed to generate signature');
+        
+        // Handle specific MetaMask errors
+        if (err.code === 4001 || err.message?.includes('User rejected')) {
+          setError('Signature request rejected by user');
+        } else if (err.message?.includes('timeout')) {
+          setError('Signature request timed out - check if MetaMask popup is open');
+        } else if (err.code === -32002) {
+          setError('MetaMask already has a pending request - please check MetaMask window');
+        } else {
+          setError(err.message || 'Failed to generate signature');
+        }
         return null;
       } finally {
         setIsLoading(false);
